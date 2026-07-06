@@ -176,9 +176,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setNewMemberEmail('')
       toast.success('Persona vinculada al espacio')
     } catch (err) {
-      const msg = err instanceof Error && err.message.includes('duplicate')
-        ? 'Esa persona ya está vinculada'
-        : 'Error al vincular. Solo el dueño puede invitar.'
+      const raw = err instanceof Error ? err.message : ''
+      let msg = 'Error al vincular. Solo el dueño puede invitar.'
+      if (raw.includes('duplicate')) {
+        msg = 'Esa persona ya está vinculada'
+      } else if (raw.includes('workspace_members') || raw.includes('schema cache') || raw.includes('does not exist')) {
+        msg = 'Falta configurar la base de datos (corre setup-all.sql en Supabase).'
+      }
       toast.error(msg)
     }
   }
