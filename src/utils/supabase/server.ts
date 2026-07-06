@@ -11,6 +11,7 @@ export const createClient = async () => {
     supabaseUrl!,
     supabaseKey!,
     {
+      db: { schema: "finanzas" },
       cookies: {
         getAll() {
           return cookieStore.getAll();

@@ -12,5 +12,8 @@ if (!supabaseKey) {
 
 export const supabase = createClient(
   supabaseUrl,
-  supabaseKey
+  supabaseKey,
+  {
+    db: { schema: 'finanzas' },
+  }
 )

@@ -7,4 +7,7 @@ export const createClient = () =>
   createBrowserClient(
     supabaseUrl!,
     supabaseKey!,
+    {
+      db: { schema: "finanzas" },
+    }
   );

@@ -16,6 +16,7 @@ export const updateSession = async (request: NextRequest) => {
     supabaseUrl!,
     supabaseKey!,
     {
+      db: { schema: "finanzas" },
       cookies: {
         getAll() {
           return request.cookies.getAll();
