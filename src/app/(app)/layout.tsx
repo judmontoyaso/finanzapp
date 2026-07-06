@@ -81,6 +81,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const wsList = await LocalDB.getWorkspaces()
       setWorkspaces(wsList)
 
+      // Aviso in-app: espacios compartidos conmigo que aún no había visto
+      const shared = wsList.filter((w) => w.user_id !== currentUser.id)
+      if (typeof window !== 'undefined' && shared.length > 0) {
+        let seen: string[] = []
+        try {
+          seen = JSON.parse(localStorage.getItem('finanzas_seen_shared') || '[]')
+        } catch {}
+        const nuevos = shared.filter((w) => !seen.includes(w.id))
+        nuevos.forEach((w) => {
+          toast.success(`🤝 Te añadieron al espacio "${w.name}"`, { duration: 6000 })
+        })
+        if (nuevos.length > 0) {
+          localStorage.setItem('finanzas_seen_shared', JSON.stringify(shared.map((w) => w.id)))
+        }
+      }
+
       const storedWs = LocalDB.getActiveWorkspaceId()
       if (storedWs && wsList.some((w) => w.id === storedWs)) {
         setActiveWorkspaceId(storedWs)
@@ -171,19 +187,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const email = newMemberEmail.trim().toLowerCase()
     if (!email || !activeWorkspaceId) return
     try {
-      const member = await LocalDB.addWorkspaceMember(activeWorkspaceId, email)
-      setMembers((prev) => [...prev, member])
-      setNewMemberEmail('')
-      toast.success('Persona vinculada al espacio')
-    } catch (err) {
-      const raw = err instanceof Error ? err.message : ''
-      let msg = 'Error al vincular. Solo el dueño puede invitar.'
-      if (raw.includes('duplicate')) {
-        msg = 'Esa persona ya está vinculada'
-      } else if (raw.includes('workspace_members') || raw.includes('schema cache') || raw.includes('does not exist')) {
-        msg = 'Falta configurar la base de datos (corre setup-all.sql en Supabase).'
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: activeWorkspaceId, email }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'No se pudo vincular')
+        return
       }
-      toast.error(msg)
+      if (data.member) setMembers((prev) => [...prev, data.member])
+      setNewMemberEmail('')
+      toast.success(data.emailed ? 'Invitación enviada por correo' : 'Persona vinculada al espacio')
+    } catch {
+      toast.error('Error de red al vincular')
     }
   }
 
