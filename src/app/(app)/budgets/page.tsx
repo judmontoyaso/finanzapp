@@ -123,7 +123,7 @@ export default function BudgetsPage() {
     <div className="space-y-6 animate-fadeIn">
       {/* Cabecera */}
       <div>
-        <h1 className="text-xl font-bold text-white tracking-tight">Presupuestos de Gastos</h1>
+        <h1 className="text-xl font-bold text-slate-100 tracking-tight">Presupuestos de Gastos</h1>
         <p className="text-slate-400 text-xs mt-1">
           Asigna límites de gastos mensuales a tus categorías y vigila tu progreso en tiempo real.
         </p>
@@ -134,7 +134,7 @@ export default function BudgetsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Presupuesto Mensual Total</span>
-            <p className="text-2xl font-extrabold text-white mt-1">
+            <p className="text-2xl font-extrabold text-slate-100 mt-1">
               ${totalBudgeted.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
             </p>
           </div>
@@ -214,7 +214,7 @@ export default function BudgetsPage() {
               <div>
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-bold text-white text-sm">{item.category.name}</h3>
+                    <h3 className="font-bold text-slate-100 text-sm">{item.category.name}</h3>
                     <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold mt-1 border ${badgeColor}`}>
                       {badgeText}
                     </span>
@@ -276,12 +276,12 @@ export default function BudgetsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative">
             <button
               onClick={() => { setIsModalOpen(false); setSelectedCategory(null); }}
-              className="absolute top-4 right-4 text-slate-450 hover:text-white"
+              className="absolute top-4 right-4 text-slate-450 hover:text-slate-100"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-1">Fijar Presupuesto Mensual</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-1">Fijar Presupuesto Mensual</h2>
             <p className="text-xs text-slate-400 mb-6">
               Establece el límite de gasto para la categoría <span className="text-emerald-500 font-bold">{selectedCategory.name}</span>.
             </p>
@@ -296,7 +296,7 @@ export default function BudgetsPage() {
                   placeholder="Ej. 500"
                   value={budgetAmount}
                   onChange={(e) => setBudgetAmount(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   autoFocus
                 />
                 <span className="text-[10px] text-slate-500 block mt-1.5 leading-relaxed">

@@ -34,7 +34,7 @@ export default function LandingPage() {
           <div className="w-8 h-8 bg-emerald-600 text-white rounded-md flex items-center justify-center">
             <FaWallet className="w-4 h-4" />
           </div>
-          <span className="text-md font-bold tracking-tight text-white">
+          <span className="text-md font-bold tracking-tight text-slate-100">
             Finanzas<span className="text-emerald-500">Personales</span>
           </span>
         </div>
@@ -68,7 +68,7 @@ export default function LandingPage() {
         </div>
 
         {/* Headline */}
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white leading-tight mb-6">
+        <h1 className="text-4xl md:text-6xl font-black tracking-tight text-slate-100 leading-tight mb-6">
           Toma el control absoluto de tus <span className="text-emerald-500">Finanzas Diarias</span>
         </h1>
         
@@ -120,7 +120,7 @@ export default function LandingPage() {
 
       {/* Features Section */}
       <section id="features" className="max-w-7xl mx-auto w-full px-6 py-16 border-t border-slate-900">
-        <h2 className="text-xl font-bold text-center text-white uppercase tracking-wider mb-12">
+        <h2 className="text-xl font-bold text-center text-slate-100 uppercase tracking-wider mb-12">
           Características Principales
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -129,7 +129,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-emerald-600/10 text-emerald-400 rounded-md flex items-center justify-center mb-5">
               <FiPieChart className="w-5 h-5" />
             </div>
-            <h3 className="text-md font-bold mb-2 text-white">Gráficos Analíticos</h3>
+            <h3 className="text-md font-bold mb-2 text-slate-100">Gráficos Analíticos</h3>
             <p className="text-slate-400 leading-relaxed text-xs">
               Visualiza tus tendencias de gastos e ingresos con gráficos interactivos responsivos que se adaptan a tus espacios de trabajo.
             </p>
@@ -140,7 +140,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-teal-600/10 text-teal-400 rounded-md flex items-center justify-center mb-5">
               <FiCheckSquare className="w-5 h-5" />
             </div>
-            <h3 className="text-md font-bold mb-2 text-white">Control de Presupuestos</h3>
+            <h3 className="text-md font-bold mb-2 text-slate-100">Control de Presupuestos</h3>
             <p className="text-slate-400 leading-relaxed text-xs">
               Define presupuestos mensuales límite por cada categoría de gasto y observa barras de progreso de color adaptativas.
             </p>
@@ -151,7 +151,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-indigo-600/10 text-indigo-400 rounded-md flex items-center justify-center mb-5">
               <FiSmartphone className="w-5 h-5" />
             </div>
-            <h3 className="text-md font-bold mb-2 text-white">Soporte PWA</h3>
+            <h3 className="text-md font-bold mb-2 text-slate-100">Soporte PWA</h3>
             <p className="text-slate-400 leading-relaxed text-xs">
               Instala la aplicación en tu celular para tener un acceso rápido como una app nativa, con caché fuera de línea y alta velocidad.
             </p>

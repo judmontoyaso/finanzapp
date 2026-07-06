@@ -159,7 +159,7 @@ export default function SavingsPage() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Metas de Ahorro</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Metas de Ahorro</h1>
           <p className="text-slate-400 text-xs mt-1">
             Planea compras, fondos de emergencia o inversiones para tus futuros negocios.
           </p>
@@ -178,7 +178,7 @@ export default function SavingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Objetivo Acumulado</span>
-            <p className="text-2xl font-extrabold text-white mt-1">
+            <p className="text-2xl font-extrabold text-slate-100 mt-1">
               ${totalTarget.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
             </p>
           </div>
@@ -217,7 +217,7 @@ export default function SavingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {goals.length === 0 ? (
           <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-md p-10 text-center text-slate-500">
-            <h3 className="text-xs font-bold text-white mb-1">Crea tu primera meta de ahorro</h3>
+            <h3 className="text-xs font-bold text-slate-100 mb-1">Crea tu primera meta de ahorro</h3>
             <p className="text-xs max-w-sm mx-auto mb-4 text-slate-500">Establece un propósito, una cifra objetivo y aporta dinero periódicamente para alcanzarla.</p>
             <button
               onClick={() => setIsAddOpen(true)}
@@ -243,7 +243,7 @@ export default function SavingsPage() {
                 {/* Detalles de la meta */}
                 <div className="flex-1 space-y-3.5 text-center sm:text-left w-full">
                   <div>
-                    <h3 className="font-bold text-white text-sm">{g.name}</h3>
+                    <h3 className="font-bold text-slate-100 text-sm">{g.name}</h3>
                     {g.target_date && (
                       <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
                         Límite: {new Date(g.target_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -315,7 +315,7 @@ export default function SavingsPage() {
                     />
                   </svg>
                   <div className="absolute">
-                    <span className="text-xs font-black text-white">{percent.toFixed(0)}%</span>
+                    <span className="text-xs font-black text-slate-100">{percent.toFixed(0)}%</span>
                   </div>
                 </div>
               </div>
@@ -326,7 +326,7 @@ export default function SavingsPage() {
 
       {/* COPIA DE SEGURIDAD */}
       <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Copia de Seguridad y Respaldos</h3>
+        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-2">Copia de Seguridad y Respaldos</h3>
         <p className="text-[10px] text-slate-400 mb-6">
           Exporta tu base de datos local en formato JSON para transferirla a otros navegadores o guardarla como respaldo.
         </p>
@@ -363,12 +363,12 @@ export default function SavingsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative">
             <button
               onClick={() => setIsAddOpen(false)}
-              className="absolute top-4 right-4 text-slate-450 hover:text-white"
+              className="absolute top-4 right-4 text-slate-450 hover:text-slate-100"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-2">Crear Meta de Ahorro</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-2">Crear Meta de Ahorro</h2>
             <p className="text-xs text-slate-400 mb-6">Fija una meta de dinero para tus inversiones o planes futuros.</p>
 
             <form onSubmit={handleCreateGoal} className="space-y-4">
@@ -380,7 +380,7 @@ export default function SavingsPage() {
                   placeholder="Ej. Fondo de Emergencia, Inversión Negocio..."
                   value={newGoalName}
                   onChange={(e) => setNewGoalName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   autoFocus
                 />
               </div>
@@ -395,7 +395,7 @@ export default function SavingsPage() {
                     placeholder="0.00"
                     value={newGoalTarget}
                     onChange={(e) => setNewGoalTarget(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -404,7 +404,7 @@ export default function SavingsPage() {
                     type="date"
                     value={newGoalDate}
                     onChange={(e) => setNewGoalDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   />
                 </div>
               </div>
@@ -435,12 +435,12 @@ export default function SavingsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative">
             <button
               onClick={() => { setActiveGoal(null); setActionType(null); }}
-              className="absolute top-4 right-4 text-slate-450 hover:text-white"
+              className="absolute top-4 right-4 text-slate-450 hover:text-slate-100"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-2">
+            <h2 className="text-md font-bold text-slate-100 mb-2">
               {actionType === 'contribute' ? 'Aportar Ahorro' : 'Retirar Ahorro'}
             </h2>
             <p className="text-xs text-slate-400 mb-6">
@@ -457,7 +457,7 @@ export default function SavingsPage() {
                   placeholder="0.00"
                   value={actionAmount}
                   onChange={(e) => setActionAmount(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   autoFocus
                 />
               </div>

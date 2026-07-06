@@ -79,7 +79,7 @@ export default function CategoriesPage() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Categorías de Movimientos</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Categorías de Movimientos</h1>
           <p className="text-slate-400 text-xs mt-1">
             Administra las categorías de tus ingresos y gastos para clasificar tus movimientos de forma personalizada.
           </p>
@@ -103,7 +103,7 @@ export default function CategoriesPage() {
               <FiTrendingDown className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Categorías de Gastos</h2>
+              <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Categorías de Gastos</h2>
               <p className="text-[10px] text-slate-500">Etiquetas aplicables a tus egresos mensuales</p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export default function CategoriesPage() {
               <FiTrendingUp className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Categorías de Ingresos</h2>
+              <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Categorías de Ingresos</h2>
               <p className="text-[10px] text-slate-500">Etiquetas aplicables a tus depósitos y entradas</p>
             </div>
           </div>
@@ -192,12 +192,12 @@ export default function CategoriesPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative">
             <button
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-450 hover:text-white"
+              className="absolute top-4 right-4 text-slate-450 hover:text-slate-100"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-1">Crear Nueva Categoría</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-1">Crear Nueva Categoría</h2>
             <p className="text-xs text-slate-400 mb-6">
               Agrega una etiqueta para clasificar tus gastos o ingresos en el espacio de trabajo.
             </p>
@@ -211,7 +211,7 @@ export default function CategoriesPage() {
                   placeholder="Ej. Regalos, Mascotas, Gimnasio..."
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   autoFocus
                 />
               </div>
@@ -225,7 +225,7 @@ export default function CategoriesPage() {
                     className={`py-2 px-4 rounded-md text-xs font-bold border transition-all cursor-pointer ${
                       newCatType === 'expense'
                         ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-sm'
-                        : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-white'
+                        : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     Gasto (-)
@@ -236,7 +236,7 @@ export default function CategoriesPage() {
                     className={`py-2 px-4 rounded-md text-xs font-bold border transition-all cursor-pointer ${
                       newCatType === 'income'
                         ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-sm'
-                        : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-white'
+                        : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     Ingreso (+)

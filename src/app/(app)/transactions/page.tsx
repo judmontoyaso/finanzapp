@@ -215,7 +215,7 @@ export default function TransactionsPage() {
       {/* Título */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Historial de Transacciones</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Historial de Transacciones</h1>
           <p className="text-slate-400 text-xs mt-1">Busca, filtra, exporta y gestiona tus ingresos y gastos.</p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -383,7 +383,7 @@ export default function TransactionsPage() {
                         <div className="flex justify-center items-center gap-1.5">
                           <button
                             onClick={() => handleEditOpen(tx)}
-                            className="p-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-800 text-slate-450 hover:text-white rounded-md transition-all cursor-pointer"
+                            className="p-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-800 text-slate-450 hover:text-slate-100 rounded-md transition-all cursor-pointer"
                           >
                             <FiEdit className="w-3.5 h-3.5" />
                           </button>
@@ -451,12 +451,12 @@ export default function TransactionsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative">
             <button
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-500 hover:text-white"
+              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-6">Añadir Nueva Transacción</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-6">Añadir Nueva Transacción</h2>
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
@@ -466,7 +466,7 @@ export default function TransactionsPage() {
                   name="description"
                   required
                   placeholder="Ej. Compra de insumos"
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
 
@@ -479,7 +479,7 @@ export default function TransactionsPage() {
                     step="0.01"
                     required
                     placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -489,7 +489,7 @@ export default function TransactionsPage() {
                     name="date"
                     required
                     defaultValue={new Date().toISOString().slice(0, 10)}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   />
                 </div>
               </div>
@@ -500,7 +500,7 @@ export default function TransactionsPage() {
                   <select
                     name="type"
                     required
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
                     <option value="expense">Gasto (-)</option>
                     <option value="income">Ingreso (+)</option>
@@ -511,7 +511,7 @@ export default function TransactionsPage() {
                   <select
                     name="category_id"
                     required
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -548,12 +548,12 @@ export default function TransactionsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative">
             <button
               onClick={() => { setIsEditModalOpen(false); setEditingTransaction(null); }}
-              className="absolute top-4 right-4 text-slate-500 hover:text-white"
+              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-6">Editar Transacción</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-6">Editar Transacción</h2>
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
@@ -564,7 +564,7 @@ export default function TransactionsPage() {
                   required
                   defaultValue={editingTransaction.description}
                   placeholder="Ej. Compra de supermercado"
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
 
@@ -578,7 +578,7 @@ export default function TransactionsPage() {
                     required
                     defaultValue={editingTransaction.amount}
                     placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -588,7 +588,7 @@ export default function TransactionsPage() {
                     name="date"
                     required
                     defaultValue={editingTransaction.date}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   />
                 </div>
               </div>
@@ -600,7 +600,7 @@ export default function TransactionsPage() {
                     name="type"
                     required
                     defaultValue={editingTransaction.type}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
                     <option value="expense">Gasto (-)</option>
                     <option value="income">Ingreso (+)</option>
@@ -612,7 +612,7 @@ export default function TransactionsPage() {
                     name="category_id"
                     required
                     defaultValue={editingTransaction.category_id}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>

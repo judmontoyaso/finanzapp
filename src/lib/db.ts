@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { Category, Transaction, Budget, Workspace, SavingsGoal } from '@/types'
+import { Category, Transaction, Budget, Workspace, SavingsGoal, WorkspaceMember } from '@/types'
 
 // Mock User Type
 export type User = {
@@ -116,6 +116,42 @@ export const LocalDB = {
 
     this.dispatchEvent()
     return activeWs as Workspace
+  },
+
+  // --- WORKSPACE MEMBERS (compartir por email) ---
+  async getWorkspaceMembers(workspaceId: string): Promise<WorkspaceMember[]> {
+    const { data, error } = await supabase
+      .from('workspace_members')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+    return data as WorkspaceMember[]
+  },
+
+  async addWorkspaceMember(workspaceId: string, email: string): Promise<WorkspaceMember> {
+    const clean = email.trim().toLowerCase()
+    if (!clean) throw new Error('Email vacío')
+
+    const { data, error } = await supabase
+      .from('workspace_members')
+      .insert({ workspace_id: workspaceId, invited_email: clean })
+      .select()
+
+    if (error) throw error
+    this.dispatchEvent()
+    return (data && data[0]) ? (data[0] as WorkspaceMember) : { id: 'fallback-member-id', workspace_id: workspaceId, invited_email: clean, created_at: new Date().toISOString() }
+  },
+
+  async removeWorkspaceMember(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('workspace_members')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    this.dispatchEvent()
   },
 
   getActiveWorkspaceId(): string {

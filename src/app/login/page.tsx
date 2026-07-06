@@ -37,13 +37,13 @@ export default function LoginPage() {
           <div className="w-9 h-9 bg-emerald-600 text-white rounded-md flex items-center justify-center">
             <FaWallet className="w-5 h-5" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">
+          <span className="text-xl font-bold tracking-tight text-slate-100">
             Finanzas<span className="text-emerald-500">Personales</span>
           </span>
         </div>
 
         {/* Título de la Sección */}
-        <h1 className="text-xl font-bold text-white text-center mb-1">
+        <h1 className="text-xl font-bold text-slate-100 text-center mb-1">
           Iniciar Sesión
         </h1>
         <p className="text-slate-400 text-xs text-center mb-8">

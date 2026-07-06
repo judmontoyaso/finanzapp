@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { LocalDB, User } from '@/lib/db'
-import { Workspace } from '@/types'
+import { Workspace, WorkspaceMember } from '@/types'
 import { toast } from 'react-hot-toast'
 import { FaWallet } from 'react-icons/fa'
+import ThemeToggle from '@/components/ThemeToggle'
 import {
   FiMenu,
   FiGrid,
@@ -17,7 +18,9 @@ import {
   FiLogOut,
   FiBriefcase,
   FiPlus,
-  FiX
+  FiX,
+  FiUsers,
+  FiTrash2
 } from 'react-icons/fi'
 
 const NAV_ITEMS = [
@@ -43,6 +46,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Workspace creation modal
   const [isWsModalOpen, setIsWsModalOpen] = useState(false)
   const [newWsName, setNewWsName] = useState('')
+
+  // Share (members) modal
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [members, setMembers] = useState<WorkspaceMember[]>([])
+  const [newMemberEmail, setNewMemberEmail] = useState('')
+  const [membersLoading, setMembersLoading] = useState(false)
+
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId)
+  const isOwner = !!user && !!activeWorkspace && activeWorkspace.user_id === user.id
 
   const loadData = useCallback(async () => {
     try {
@@ -120,6 +132,47 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const openShareModal = async () => {
+    if (!activeWorkspaceId) return
+    setIsShareModalOpen(true)
+    setMembersLoading(true)
+    try {
+      const list = await LocalDB.getWorkspaceMembers(activeWorkspaceId)
+      setMembers(list)
+    } catch {
+      toast.error('No se pudieron cargar los miembros')
+    } finally {
+      setMembersLoading(false)
+    }
+  }
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const email = newMemberEmail.trim().toLowerCase()
+    if (!email || !activeWorkspaceId) return
+    try {
+      const member = await LocalDB.addWorkspaceMember(activeWorkspaceId, email)
+      setMembers((prev) => [...prev, member])
+      setNewMemberEmail('')
+      toast.success('Persona vinculada al espacio')
+    } catch (err) {
+      const msg = err instanceof Error && err.message.includes('duplicate')
+        ? 'Esa persona ya está vinculada'
+        : 'Error al vincular. Solo el dueño puede invitar.'
+      toast.error(msg)
+    }
+  }
+
+  const handleRemoveMember = async (id: string) => {
+    try {
+      await LocalDB.removeWorkspaceMember(id)
+      setMembers((prev) => prev.filter((m) => m.id !== id))
+      toast.success('Acceso revocado')
+    } catch {
+      toast.error('Error al revocar acceso')
+    }
+  }
+
   const handleSignOut = async () => {
     await LocalDB.signOut()
     router.push('/login')
@@ -145,7 +198,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center h-screen bg-slate-950 px-6">
         <div className="bg-slate-900 border border-slate-800 rounded-md p-8 max-w-md w-full text-center space-y-4">
           <FaWallet className="w-8 h-8 text-emerald-500 mx-auto" />
-          <h2 className="text-lg font-bold text-white">Error de Conexion</h2>
+          <h2 className="text-lg font-bold text-slate-100">Error de Conexion</h2>
           <p className="text-xs text-slate-400 leading-relaxed">
             No se pudo conectar con la base de datos. Verifica tu configuracion de Supabase y que las variables de entorno esten correctas.
           </p>
@@ -168,12 +221,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2.5 overflow-hidden">
           <FaWallet className="w-5 h-5 text-emerald-500 flex-shrink-0" />
           {!collapsed && (
-            <span className="text-sm font-bold text-white whitespace-nowrap">FinanzasPersonales</span>
+            <span className="text-sm font-bold text-slate-100 whitespace-nowrap">FinanzasPersonales</span>
           )}
         </div>
         <button
           onClick={toggleCollapsed}
-          className="hidden md:flex p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 transition-all cursor-pointer"
+          className="hidden md:flex p-1.5 text-slate-400 hover:text-slate-100 rounded-md hover:bg-slate-800 transition-all cursor-pointer"
         >
           <FiMenu className="w-4 h-4" />
         </button>
@@ -182,20 +235,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Workspace Selector */}
       <div className="px-3 py-3 border-b border-slate-800">
         {collapsed ? (
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
             <FiBriefcase className="w-4 h-4 text-slate-400" />
+            {isOwner && (
+              <button
+                onClick={openShareModal}
+                title="Compartir espacio"
+                className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-md hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <FiUsers className="w-4 h-4" />
+              </button>
+            )}
           </div>
         ) : (
-          <select
-            value={activeWorkspaceId}
-            onChange={(e) => handleWorkspaceChange(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2 text-[10px] font-semibold focus:border-emerald-500 outline-none transition-all cursor-pointer"
-          >
-            {workspaces.map((ws) => (
-              <option key={ws.id} value={ws.id}>{ws.name}</option>
-            ))}
-            <option value="__new__">+ Crear espacio de trabajo</option>
-          </select>
+          <>
+            <select
+              value={activeWorkspaceId}
+              onChange={(e) => handleWorkspaceChange(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2 text-[10px] font-semibold focus:border-emerald-500 outline-none transition-all cursor-pointer"
+            >
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>{ws.name}</option>
+              ))}
+              <option value="__new__">+ Crear espacio de trabajo</option>
+            </select>
+            {isOwner && (
+              <button
+                onClick={openShareModal}
+                className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-emerald-400 border border-slate-800 hover:border-emerald-500/40 rounded-md transition-all cursor-pointer"
+              >
+                <FiUsers className="w-3 h-3" /> Compartir
+              </button>
+            )}
+          </>
         )}
       </div>
 
@@ -212,8 +284,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               title={collapsed ? item.label : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-150 group ${
                 isActive
-                  ? 'bg-slate-800 text-white border-l-2 border-emerald-500'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  ? 'bg-slate-800 text-slate-100'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
               }`}
             >
               <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-emerald-400' : ''}`} />
@@ -237,11 +309,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           />
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">{user?.name || 'Usuario'}</p>
+              <p className="text-xs font-bold text-slate-100 truncate">{user?.name || 'Usuario'}</p>
               <p className="text-[10px] text-slate-500 truncate">{user?.email || ''}</p>
             </div>
           )}
         </div>
+
+        {/* Theme Toggle */}
+        <ThemeToggle collapsed={collapsed} />
 
         {/* Sign Out */}
         <button
@@ -271,11 +346,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 h-14 flex items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
           <FaWallet className="w-5 h-5 text-emerald-500" />
-          <span className="text-sm font-bold text-white">FinanzasPersonales</span>
+          <span className="text-sm font-bold text-slate-100">FinanzasPersonales</span>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 transition-all cursor-pointer"
+          className="p-1.5 text-slate-400 hover:text-slate-100 rounded-md hover:bg-slate-800 transition-all cursor-pointer"
         >
           <FiMenu className="w-5 h-5" />
         </button>
@@ -294,7 +369,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-end px-4 py-3 border-b border-slate-800">
               <button
                 onClick={closeMobile}
-                className="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 transition-all cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-100 rounded-md hover:bg-slate-800 transition-all cursor-pointer"
               >
                 <FiX className="w-5 h-5" />
               </button>
@@ -304,7 +379,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {/* Logo */}
               <div className="flex items-center gap-2.5 px-4 py-4 border-b border-slate-800">
                 <FaWallet className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                <span className="text-sm font-bold text-white whitespace-nowrap">FinanzasPersonales</span>
+                <span className="text-sm font-bold text-slate-100 whitespace-nowrap">FinanzasPersonales</span>
               </div>
 
               {/* Workspace Selector */}
@@ -319,6 +394,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   ))}
                   <option value="__new__">+ Crear espacio de trabajo</option>
                 </select>
+                {isOwner && (
+                  <button
+                    onClick={() => { closeMobile(); openShareModal() }}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-emerald-400 border border-slate-800 hover:border-emerald-500/40 rounded-md transition-all cursor-pointer"
+                  >
+                    <FiUsers className="w-3 h-3" /> Compartir
+                  </button>
+                )}
               </div>
 
               {/* Navigation */}
@@ -333,8 +416,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={closeMobile}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-150 group ${
                         isActive
-                          ? 'bg-slate-800 text-white border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                          ? 'bg-slate-800 text-slate-100 border-l-2 border-emerald-500'
+                          : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
                       }`}
                     >
                       <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-emerald-400' : ''}`} />
@@ -355,10 +438,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     className="w-8 h-8 rounded-md object-cover flex-shrink-0"
                   />
                   <div className="overflow-hidden">
-                    <p className="text-xs font-bold text-white truncate">{user?.name || 'Usuario'}</p>
+                    <p className="text-xs font-bold text-slate-100 truncate">{user?.name || 'Usuario'}</p>
                     <p className="text-[10px] text-slate-500 truncate">{user?.email || ''}</p>
                   </div>
                 </div>
+                <ThemeToggle />
                 <button
                   onClick={handleSignOut}
                   className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 transition-all cursor-pointer border-t border-slate-800"
@@ -385,12 +469,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative">
             <button
               onClick={() => { setIsWsModalOpen(false); setNewWsName('') }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 cursor-pointer"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-white mb-1">Crear Espacio de Trabajo</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-1">Crear Espacio de Trabajo</h2>
             <p className="text-xs text-slate-400 mb-6">
               Los espacios de trabajo te permiten separar tus finanzas personales de las de un negocio u otro proyecto.
             </p>
@@ -404,7 +488,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   placeholder="Ej. Negocio, Casa, Inversiones..."
                   value={newWsName}
                   onChange={(e) => setNewWsName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   autoFocus
                 />
               </div>
@@ -424,6 +508,68 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Share Workspace (members) */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative">
+            <button
+              onClick={() => { setIsShareModalOpen(false); setNewMemberEmail('') }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 cursor-pointer"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-md font-bold text-slate-100 mb-1 flex items-center gap-2">
+              <FiUsers className="w-4 h-4 text-emerald-500" /> Compartir Espacio
+            </h2>
+            <p className="text-xs text-slate-400 mb-5">
+              Vincula personas por su email. Podrán ver y editar todo en
+              <span className="text-slate-300 font-semibold"> {activeWorkspace?.name}</span>.
+              Deben iniciar sesión con ese mismo email.
+            </p>
+
+            <form onSubmit={handleAddMember} className="flex gap-2 mb-5">
+              <input
+                type="email"
+                required
+                placeholder="persona@email.com"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <FiPlus className="w-3.5 h-3.5" /> Vincular
+              </button>
+            </form>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
+              {membersLoading ? (
+                <p className="text-xs text-slate-500 text-center py-4">Cargando...</p>
+              ) : members.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">Aún no has vinculado a nadie.</p>
+              ) : (
+                members.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-md px-3 py-2">
+                    <span className="text-xs text-slate-200 truncate">{m.invited_email}</span>
+                    <button
+                      onClick={() => handleRemoveMember(m.id)}
+                      title="Revocar acceso"
+                      className="p-1 text-slate-500 hover:text-rose-400 transition-all cursor-pointer flex-shrink-0"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -39,10 +39,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="dark scroll-smooth">
+    <html lang="es" className="scroll-smooth">
       <body
         className={`${roboto.variable} font-sans antialiased bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark');}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
         <RegisterSW />
         <Toaster 
           position="top-right"

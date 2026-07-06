@@ -88,7 +88,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
       {/* GRÁFICO HISTÓRICO: LÍNEAS / ÁREAS */}
       <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm relative overflow-hidden">
         <div className="mb-4">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Evolución Semestral</h3>
+          <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Evolución Semestral</h3>
           <p className="text-[10px] text-slate-500">Comparativa de ingresos y gastos del periodo</p>
         </div>
 
@@ -291,7 +291,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
       <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm flex flex-col sm:flex-row items-center gap-6">
         <div className="flex-1 w-full">
           <div className="mb-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Distribución de Gastos</h3>
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Distribución de Gastos</h3>
             <p className="text-[10px] text-slate-500">Gastos agregados del mes actual</p>
           </div>
 
@@ -318,7 +318,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
                     <span className="text-xs font-semibold text-slate-350">{item.name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-bold text-white">${item.amount.toLocaleString()}</span>
+                    <span className="text-xs font-bold text-slate-100">${item.amount.toLocaleString()}</span>
                     <span className="text-[9px] text-slate-500 ml-1.5">{item.percentage.toFixed(0)}%</span>
                   </div>
                 </div>
@@ -373,7 +373,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
                   <span className="text-[8px] uppercase tracking-wider text-slate-500 font-bold max-w-[70px] truncate">
                     {expenseByCategory[activeDonutIdx].name}
                   </span>
-                  <span className="text-sm font-bold text-white mt-0.5">
+                  <span className="text-sm font-bold text-slate-100 mt-0.5">
                     ${expenseByCategory[activeDonutIdx].amount.toLocaleString()}
                   </span>
                   <span className="text-[9px] text-emerald-500 font-bold">
@@ -385,7 +385,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
                   <span className="text-[8px] uppercase tracking-wider text-slate-500 font-bold">
                     Total Gastos
                   </span>
-                  <span className="text-base font-bold text-white mt-0.5">
+                  <span className="text-base font-bold text-slate-100 mt-0.5">
                     ${totalExpenseThisMonth.toLocaleString()}
                   </span>
                   <span className="text-[8px] text-slate-500">Este Mes</span>

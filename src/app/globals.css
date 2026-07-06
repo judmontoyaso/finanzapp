@@ -1,9 +1,50 @@
 @import 'primeicons/primeicons.css';
 @import "tailwindcss";
 
+/* Class-based dark mode toggle */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Light theme (default). The whole app is authored with dark slate colors
+  (bg-slate-950, text-white, border-slate-800...). Instead of rewriting every
+  utility with dark: variants, we remap the slate color scale per theme.
+  Tailwind v4 compiles color utilities to var(--color-slate-*), so overriding
+  these variables flips the entire palette. text-white is converted to
+  text-slate-100 in the markup so primary text flips too; text-white is kept
+  only on colored buttons (emerald/rose/...) where it must stay white.
+*/
 :root {
-  --background: #020617; /* slate-950 */
-  --foreground: #f8fafc; /* slate-50 */
+  --color-slate-50:  #0f172a;
+  --color-slate-100: #0f172a; /* primary text -> near-black */
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569; /* secondary text -> dark gray */
+  --color-slate-500: #64748b; /* muted text -> mid gray */
+  --color-slate-600: #94a3b8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0; /* borders / hover -> light */
+  --color-slate-900: #ffffff; /* cards -> white */
+  --color-slate-950: #f1f5f9; /* app background -> very light */
+
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+}
+
+.dark {
+  --color-slate-50:  #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
 @theme inline {
@@ -29,12 +70,12 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--color-slate-800);
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--color-slate-700);
 }
 
 /* Sidebar transitions */

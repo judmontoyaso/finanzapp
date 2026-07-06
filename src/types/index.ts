@@ -5,6 +5,13 @@ export type Workspace = {
   created_at: string
 }
 
+export type WorkspaceMember = {
+  id: string
+  workspace_id: string
+  invited_email: string
+  created_at: string
+}
+
 export type Category = {
   id: string
   name: string

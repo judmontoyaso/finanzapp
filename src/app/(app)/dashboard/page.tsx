@@ -97,7 +97,7 @@ export default function DashboardPage() {
       {/* Título de la página */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Mi Control Financiero</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Mi Control Financiero</h1>
           <p className="text-slate-400 text-xs mt-1">Resumen general y estadísticas de tus movimientos del mes.</p>
         </div>
         <Link
@@ -185,7 +185,7 @@ export default function DashboardPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md lg:col-span-1 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-5">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Metas de Presupuesto</h3>
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Metas de Presupuesto</h3>
               <Link href="/budgets" className="text-[10px] font-semibold text-emerald-450 hover:underline">
                 Gestionar
               </Link>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md lg:col-span-2 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-5">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Actividad Reciente</h3>
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Actividad Reciente</h3>
               <Link href="/transactions" className="text-[10px] font-semibold text-emerald-450 hover:underline">
                 Ver Todas
               </Link>
