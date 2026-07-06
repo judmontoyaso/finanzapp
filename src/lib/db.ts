@@ -71,9 +71,11 @@ export const CATEGORY_TEMPLATES: Record<WorkspaceType, SeedCategory[]> = {
 export function advanceDate(dateStr: string, frequency: RecurringFrequency): string {
   const d = new Date(dateStr + 'T00:00:00')
   switch (frequency) {
+    case 'daily': d.setDate(d.getDate() + 1); break
     case 'weekly': d.setDate(d.getDate() + 7); break
     case 'biweekly': d.setDate(d.getDate() + 14); break
     case 'monthly': d.setMonth(d.getMonth() + 1); break
+    case 'quarterly': d.setMonth(d.getMonth() + 3); break
     case 'yearly': d.setFullYear(d.getFullYear() + 1); break
   }
   return d.toISOString().split('T')[0]
@@ -113,10 +115,12 @@ export const LocalDB = {
 
     if (error) throw error
 
-    let workspaces = workspacesData
+    const workspaces = workspacesData || []
 
-    // Si el usuario no tiene espacios de trabajo, auto-creamos el primero
-    if (!workspaces || workspaces.length === 0) {
+    // Todo usuario debe tener su propio espacio personal (no compartible),
+    // aunque solo tenga espacios donde es invitado. Si no posee ninguno, lo creamos.
+    const ownsAny = workspaces.some((w) => w.user_id === user.id)
+    if (!ownsAny) {
       const { data: newWs, error: wsError } = await supabase
         .from('workspaces')
         .insert({
@@ -127,18 +131,21 @@ export const LocalDB = {
         .select()
 
       if (wsError) throw wsError
-      workspaces = newWs
 
-      // Sembrar categorías iniciales (plantilla personal) para este espacio
-      const activeWs = (workspaces && workspaces.length > 0) ? workspaces[0] : { id: 'fallback-ws-id' }
-      const seedCats = CATEGORY_TEMPLATES.personal.map(cat => ({
-        name: cat.name,
-        type: cat.type,
-        workspace_id: activeWs.id,
-        user_id: user.id
-      }))
+      const created = (newWs && newWs.length > 0) ? newWs[0] : null
+      if (created) {
+        // Sembrar categorías iniciales (plantilla personal)
+        const seedCats = CATEGORY_TEMPLATES.personal.map(cat => ({
+          name: cat.name,
+          type: cat.type,
+          workspace_id: created.id,
+          user_id: user.id
+        }))
+        await supabase.from('categories').insert(seedCats)
 
-      await supabase.from('categories').insert(seedCats)
+        // El personal va primero para que sea el espacio activo por defecto
+        workspaces.unshift(created)
+      }
     }
 
     return workspaces as Workspace[]

@@ -21,8 +21,11 @@ import {
   FiPlus,
   FiX,
   FiUsers,
-  FiTrash2
+  FiTrash2,
+  FiUser,
+  FiHome
 } from 'react-icons/fi'
+import type { IconType } from 'react-icons'
 
 const NAV_ITEMS = [
   { label: 'Panel Principal', href: '/dashboard', icon: FiGrid },
@@ -33,11 +36,11 @@ const NAV_ITEMS = [
   { label: 'Categorías', href: '/categories', icon: FiTag },
 ]
 
-const WS_TYPES: { value: WorkspaceType; label: string; emoji: string; hint: string }[] = [
-  { value: 'personal', label: 'Personal', emoji: '👤', hint: 'Privado, no se puede compartir' },
-  { value: 'home', label: 'Hogar', emoji: '🏠', hint: 'Gastos del hogar en familia' },
-  { value: 'business', label: 'Negocio', emoji: '💼', hint: 'Ventas, nómina, proveedores' },
-  { value: 'other', label: 'Otro', emoji: '📁', hint: 'Categorías mínimas' },
+const WS_TYPES: { value: WorkspaceType; label: string; Icon: IconType; hint: string }[] = [
+  { value: 'personal', label: 'Personal', Icon: FiUser, hint: 'Privado, no se puede compartir' },
+  { value: 'home', label: 'Hogar', Icon: FiHome, hint: 'Gastos del hogar en familia' },
+  { value: 'business', label: 'Negocio', Icon: FiBriefcase, hint: 'Ventas, nómina, proveedores' },
+  { value: 'other', label: 'Otro', Icon: FiFolder, hint: 'Categorías mínimas' },
 ]
 
 const wsTypeMeta = (t?: string) => WS_TYPES.find((x) => x.value === t) || WS_TYPES[3]
@@ -90,7 +93,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         } catch {}
         const nuevos = shared.filter((w) => !seen.includes(w.id))
         nuevos.forEach((w) => {
-          toast.success(`🤝 Te añadieron al espacio "${w.name}"`, { duration: 6000 })
+          toast.success(`Te añadieron al espacio "${w.name}"`, {
+            duration: 6000,
+            icon: <FiUsers className="w-4 h-4 text-emerald-400" />,
+          })
         })
         if (nuevos.length > 0) {
           localStorage.setItem('finanzas_seen_shared', JSON.stringify(shared.map((w) => w.id)))
@@ -147,8 +153,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setActiveWorkspaceId(wsId)
     const ws = workspaces.find((w) => w.id === wsId)
     if (ws) {
-      const meta = wsTypeMeta(ws.type)
-      toast.success(`${meta.emoji} Ahora en: ${ws.name}`)
+      const Icon = wsTypeMeta(ws.type).Icon
+      toast.success(`Ahora en: ${ws.name}`, { icon: <Icon className="w-4 h-4 text-emerald-400" /> })
     }
   }
 
@@ -503,7 +509,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Active workspace bar (avoids confusion when switching) */}
         {activeWorkspace && (
           <div className="sticky top-14 md:top-0 z-20 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-6 md:px-8 py-3 flex items-center gap-3">
-            <span className="text-base leading-none">{wsTypeMeta(activeWorkspace.type).emoji}</span>
+            {(() => {
+              const Icon = wsTypeMeta(activeWorkspace.type).Icon
+              return <Icon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            })()}
             <div className="min-w-0">
               <p className="text-sm font-bold text-slate-100 truncate leading-tight">{activeWorkspace.name}</p>
               <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">
@@ -562,6 +571,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="grid grid-cols-2 gap-2">
                   {WS_TYPES.map((t) => {
                     const selected = newWsType === t.value
+                    const Icon = t.Icon
                     return (
                       <button
                         key={t.value}
@@ -573,7 +583,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             : 'border-slate-800 bg-slate-950 hover:border-slate-700'
                         }`}
                       >
-                        <span className="text-base leading-none">{t.emoji}</span>
+                        <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${selected ? 'text-emerald-400' : 'text-slate-400'}`} />
                         <span className="min-w-0">
                           <span className={`block text-xs font-bold ${selected ? 'text-emerald-400' : 'text-slate-200'}`}>{t.label}</span>
                           <span className="block text-[10px] text-slate-500 leading-tight">{t.hint}</span>

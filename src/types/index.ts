@@ -45,7 +45,7 @@ export type Budget = {
   created_at: string
 }
 
-export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
 
 export type RecurringTransaction = {
   id: string

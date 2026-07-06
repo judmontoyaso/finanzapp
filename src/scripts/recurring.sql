@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS finanzas.recurring_transactions (
     amount DECIMAL(10,2) NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('income', 'expense')),
     category_id UUID REFERENCES finanzas.categories(id) ON DELETE SET NULL,
-    frequency VARCHAR(20) NOT NULL CHECK (frequency IN ('weekly', 'biweekly', 'monthly', 'yearly')),
+    frequency VARCHAR(20) NOT NULL CHECK (frequency IN ('daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly')),
     next_date DATE NOT NULL,
     active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())

@@ -7,9 +7,11 @@ import { toast } from 'react-hot-toast'
 import { FiPlus, FiX, FiEdit, FiTrash2, FiCheck, FiClock, FiRepeat } from 'react-icons/fi'
 
 const FREQ_LABELS: Record<RecurringFrequency, string> = {
+  daily: 'Diario',
   weekly: 'Semanal',
   biweekly: 'Quincenal',
   monthly: 'Mensual',
+  quarterly: 'Trimestral',
   yearly: 'Anual',
 }
 
@@ -330,9 +332,11 @@ export default function RecurringPage() {
                     onChange={(e) => setForm({ ...form, frequency: e.target.value as RecurringFrequency })}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
+                    <option value="daily">Diario</option>
                     <option value="weekly">Semanal</option>
                     <option value="biweekly">Quincenal</option>
                     <option value="monthly">Mensual</option>
+                    <option value="quarterly">Trimestral</option>
                     <option value="yearly">Anual</option>
                   </select>
                 </div>
