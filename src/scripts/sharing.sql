@@ -68,10 +68,10 @@ DECLARE t TEXT;
 BEGIN
   FOREACH t IN ARRAY ARRAY['categories','transactions','budgets','savings_goals']
   LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %L ON finanzas.%I', 'Users can manage their '||replace(t,'_',' '), t);
-    EXECUTE format('DROP POLICY IF EXISTS %L ON finanzas.%I', 'members access '||t, t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON finanzas.%I', 'Users can manage their '||replace(t,'_',' '), t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON finanzas.%I', 'members access '||t, t);
     EXECUTE format(
-      'CREATE POLICY %L ON finanzas.%I FOR ALL TO authenticated '
+      'CREATE POLICY %I ON finanzas.%I FOR ALL TO authenticated '
       || 'USING (finanzas.has_workspace_access(workspace_id)) '
       || 'WITH CHECK (finanzas.has_workspace_access(workspace_id))',
       'members access '||t, t);
