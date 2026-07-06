@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { LocalDB, User } from '@/lib/db'
+import { LocalDB, User, WorkspaceType } from '@/lib/db'
 import { Workspace, WorkspaceMember } from '@/types'
 import { toast } from 'react-hot-toast'
 import { FaWallet } from 'react-icons/fa'
@@ -31,6 +31,15 @@ const NAV_ITEMS = [
   { label: 'Categorías', href: '/categories', icon: FiTag },
 ]
 
+const WS_TYPES: { value: WorkspaceType; label: string; emoji: string; hint: string }[] = [
+  { value: 'personal', label: 'Personal', emoji: '👤', hint: 'Privado, no se puede compartir' },
+  { value: 'home', label: 'Hogar', emoji: '🏠', hint: 'Gastos del hogar en familia' },
+  { value: 'business', label: 'Negocio', emoji: '💼', hint: 'Ventas, nómina, proveedores' },
+  { value: 'other', label: 'Otro', emoji: '📁', hint: 'Categorías mínimas' },
+]
+
+const wsTypeMeta = (t?: string) => WS_TYPES.find((x) => x.value === t) || WS_TYPES[3]
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -46,6 +55,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Workspace creation modal
   const [isWsModalOpen, setIsWsModalOpen] = useState(false)
   const [newWsName, setNewWsName] = useState('')
+  const [newWsType, setNewWsType] = useState<WorkspaceType>('home')
 
   // Share (members) modal
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
@@ -55,6 +65,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId)
   const isOwner = !!user && !!activeWorkspace && activeWorkspace.user_id === user.id
+  const canShare = isOwner && activeWorkspace?.type !== 'personal'
 
   const loadData = useCallback(async () => {
     try {
@@ -113,18 +124,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setIsWsModalOpen(true)
       return
     }
+    if (wsId === activeWorkspaceId) return
     LocalDB.setActiveWorkspaceId(wsId)
     setActiveWorkspaceId(wsId)
+    const ws = workspaces.find((w) => w.id === wsId)
+    if (ws) {
+      const meta = wsTypeMeta(ws.type)
+      toast.success(`${meta.emoji} Ahora en: ${ws.name}`)
+    }
   }
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newWsName.trim()) return
     try {
-      const ws = await LocalDB.addWorkspace(newWsName.trim())
+      const ws = await LocalDB.addWorkspace(newWsName.trim(), newWsType)
       LocalDB.setActiveWorkspaceId(ws.id)
       setActiveWorkspaceId(ws.id)
       setNewWsName('')
+      setNewWsType('home')
       setIsWsModalOpen(false)
       toast.success('Espacio de trabajo creado con éxito')
     } catch {
@@ -237,7 +255,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {collapsed ? (
           <div className="flex flex-col items-center gap-3">
             <FiBriefcase className="w-4 h-4 text-slate-400" />
-            {isOwner && (
+            {canShare && (
               <button
                 onClick={openShareModal}
                 title="Compartir espacio"
@@ -259,7 +277,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               ))}
               <option value="__new__">+ Crear espacio de trabajo</option>
             </select>
-            {isOwner && (
+            {canShare && (
               <button
                 onClick={openShareModal}
                 className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-emerald-400 border border-slate-800 hover:border-emerald-500/40 rounded-md transition-all cursor-pointer"
@@ -394,7 +412,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   ))}
                   <option value="__new__">+ Crear espacio de trabajo</option>
                 </select>
-                {isOwner && (
+                {canShare && (
                   <button
                     onClick={() => { closeMobile(); openShareModal() }}
                     className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-emerald-400 border border-slate-800 hover:border-emerald-500/40 rounded-md transition-all cursor-pointer"
@@ -458,6 +476,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-slate-950 pt-14 md:pt-0">
+        {/* Active workspace bar (avoids confusion when switching) */}
+        {activeWorkspace && (
+          <div className="sticky top-14 md:top-0 z-20 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-6 md:px-8 py-3 flex items-center gap-3">
+            <span className="text-base leading-none">{wsTypeMeta(activeWorkspace.type).emoji}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-100 truncate leading-tight">{activeWorkspace.name}</p>
+              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">
+                {wsTypeMeta(activeWorkspace.type).label}
+                {activeWorkspace.type !== 'personal' && !isOwner && ' · Compartido contigo'}
+              </p>
+            </div>
+            {canShare && (
+              <button
+                onClick={openShareModal}
+                title="Compartir espacio"
+                className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:text-emerald-400 border border-slate-800 hover:border-emerald-500/40 rounded-md transition-all cursor-pointer"
+              >
+                <FiUsers className="w-3 h-3" /> Compartir
+              </button>
+            )}
+          </div>
+        )}
         <div className="p-6 md:p-8">
           {children}
         </div>
@@ -492,6 +532,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   autoFocus
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Espacio</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WS_TYPES.map((t) => {
+                    const selected = newWsType === t.value
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setNewWsType(t.value)}
+                        className={`flex items-start gap-2 p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                          selected
+                            ? 'border-emerald-500 bg-emerald-500/10'
+                            : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="text-base leading-none">{t.emoji}</span>
+                        <span className="min-w-0">
+                          <span className={`block text-xs font-bold ${selected ? 'text-emerald-400' : 'text-slate-200'}`}>{t.label}</span>
+                          <span className="block text-[10px] text-slate-500 leading-tight">{t.hint}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-[10px] text-slate-500">
+                  Se crearán categorías sugeridas según el tipo. Los espacios <span className="font-semibold">Personal</span> no se pueden compartir.
+                </p>
+              </div>
+
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"

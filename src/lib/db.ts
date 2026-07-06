@@ -11,20 +11,61 @@ export type User = {
   avatar_url: string
 }
 
-// Categorías iniciales predeterminadas (para auto-llenado de base de datos)
-const DEFAULT_CATEGORIES = [
-  { name: 'Salario', type: 'income' },
-  { name: 'Inversiones', type: 'income' },
-  { name: 'Otros Ingresos', type: 'income' },
-  { name: 'Alquiler/Vivienda', type: 'expense' },
-  { name: 'Alimentación', type: 'expense' },
-  { name: 'Transporte', type: 'expense' },
-  { name: 'Servicios Públicos', type: 'expense' },
-  { name: 'Entretenimiento/Ocio', type: 'expense' },
-  { name: 'Salud/Bienestar', type: 'expense' },
-  { name: 'Educación', type: 'expense' },
-  { name: 'Ahorro / Inversión', type: 'expense' },
-]
+// Tipos de espacio de trabajo
+export type WorkspaceType = 'personal' | 'home' | 'business' | 'other'
+
+type SeedCategory = { name: string; type: 'income' | 'expense' }
+
+// Plantillas de categorías por tipo de espacio (auto-llenado inicial)
+export const CATEGORY_TEMPLATES: Record<WorkspaceType, SeedCategory[]> = {
+  personal: [
+    { name: 'Salario', type: 'income' },
+    { name: 'Inversiones', type: 'income' },
+    { name: 'Otros Ingresos', type: 'income' },
+    { name: 'Alquiler/Vivienda', type: 'expense' },
+    { name: 'Alimentación', type: 'expense' },
+    { name: 'Transporte', type: 'expense' },
+    { name: 'Servicios Públicos', type: 'expense' },
+    { name: 'Entretenimiento/Ocio', type: 'expense' },
+    { name: 'Salud/Bienestar', type: 'expense' },
+    { name: 'Educación', type: 'expense' },
+    { name: 'Ahorro / Inversión', type: 'expense' },
+  ],
+  home: [
+    { name: 'Ingresos del Hogar', type: 'income' },
+    { name: 'Otros Ingresos', type: 'income' },
+    { name: 'Mercado / Alimentación', type: 'expense' },
+    { name: 'Arriendo / Hipoteca', type: 'expense' },
+    { name: 'Servicios (Agua/Luz/Gas)', type: 'expense' },
+    { name: 'Internet / TV', type: 'expense' },
+    { name: 'Transporte', type: 'expense' },
+    { name: 'Salud', type: 'expense' },
+    { name: 'Educación', type: 'expense' },
+    { name: 'Mantenimiento del Hogar', type: 'expense' },
+    { name: 'Entretenimiento', type: 'expense' },
+    { name: 'Ahorro Familiar', type: 'expense' },
+  ],
+  business: [
+    { name: 'Ventas', type: 'income' },
+    { name: 'Servicios Prestados', type: 'income' },
+    { name: 'Otros Ingresos', type: 'income' },
+    { name: 'Nómina / Salarios', type: 'expense' },
+    { name: 'Proveedores / Inventario', type: 'expense' },
+    { name: 'Arriendo Local', type: 'expense' },
+    { name: 'Servicios Públicos', type: 'expense' },
+    { name: 'Marketing / Publicidad', type: 'expense' },
+    { name: 'Impuestos', type: 'expense' },
+    { name: 'Software / Herramientas', type: 'expense' },
+    { name: 'Transporte / Logística', type: 'expense' },
+    { name: 'Reinversión', type: 'expense' },
+  ],
+  other: [
+    { name: 'Ingresos', type: 'income' },
+    { name: 'Otros Ingresos', type: 'income' },
+    { name: 'Gastos Generales', type: 'expense' },
+    { name: 'Otros Gastos', type: 'expense' },
+  ],
+}
 
 const supabase = createClient()
 
@@ -68,16 +109,17 @@ export const LocalDB = {
         .from('workspaces')
         .insert({
           name: 'Finanzas Personales',
-          user_id: user.id
+          user_id: user.id,
+          type: 'personal'
         })
         .select()
 
       if (wsError) throw wsError
       workspaces = newWs
 
-      // Sembrar categorías iniciales para este espacio
+      // Sembrar categorías iniciales (plantilla personal) para este espacio
       const activeWs = (workspaces && workspaces.length > 0) ? workspaces[0] : { id: 'fallback-ws-id' }
-      const seedCats = DEFAULT_CATEGORIES.map(cat => ({
+      const seedCats = CATEGORY_TEMPLATES.personal.map(cat => ({
         name: cat.name,
         type: cat.type,
         workspace_id: activeWs.id,
@@ -90,7 +132,7 @@ export const LocalDB = {
     return workspaces as Workspace[]
   },
 
-  async addWorkspace(name: string): Promise<Workspace> {
+  async addWorkspace(name: string, wsType: WorkspaceType = 'other'): Promise<Workspace> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')
 
@@ -98,15 +140,17 @@ export const LocalDB = {
       .from('workspaces')
       .insert({
         name,
-        user_id: user.id
+        user_id: user.id,
+        type: wsType
       })
       .select()
 
     if (error) throw error
 
-    // Sembrar categorías iniciales para el nuevo espacio
-    const activeWs = (data && data.length > 0) ? data[0] : { id: 'fallback-ws-id', name, user_id: user.id }
-    const seedCats = DEFAULT_CATEGORIES.map(cat => ({
+    // Sembrar categorías según la plantilla del tipo elegido
+    const activeWs = (data && data.length > 0) ? data[0] : { id: 'fallback-ws-id', name, user_id: user.id, type: wsType }
+    const template = CATEGORY_TEMPLATES[wsType] || CATEGORY_TEMPLATES.other
+    const seedCats = template.map(cat => ({
       name: cat.name,
       type: cat.type,
       workspace_id: activeWs.id,

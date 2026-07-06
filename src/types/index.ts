@@ -2,6 +2,7 @@ export type Workspace = {
   id: string
   name: string
   user_id: string
+  type?: 'personal' | 'home' | 'business' | 'other'
   created_at: string
 }
 
