@@ -145,6 +145,11 @@ export const LocalDB = {
 
         // El personal va primero para que sea el espacio activo por defecto
         workspaces.unshift(created)
+
+        // Correo de bienvenida (primer login). Fire-and-forget.
+        if (typeof window !== 'undefined') {
+          fetch('/api/welcome', { method: 'POST' }).catch(() => {})
+        }
       }
     }
 
