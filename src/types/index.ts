@@ -45,6 +45,22 @@ export type Budget = {
   created_at: string
 }
 
+export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+
+export type RecurringTransaction = {
+  id: string
+  workspace_id: string
+  user_id: string
+  description: string
+  amount: number
+  type: 'income' | 'expense'
+  category_id: string | null
+  frequency: RecurringFrequency
+  next_date: string
+  active: boolean
+  created_at: string
+}
+
 export type SavingsGoal = {
   id: string
   name: string

@@ -3,20 +3,25 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { LocalDB } from '@/lib/db'
-import { Transaction, Category, Budget } from '@/types'
+import { Transaction, Category, Budget, RecurringTransaction } from '@/types'
 import DashboardCharts from '@/components/DashboardCharts'
-import { 
-  FiTrendingUp, 
-  FiTrendingDown, 
-  FiCreditCard, 
-  FiPercent, 
-  FiPlus 
+import {
+  FiTrendingUp,
+  FiTrendingDown,
+  FiCreditCard,
+  FiPercent,
+  FiPlus,
+  FiRepeat,
+  FiArrowUpRight,
+  FiArrowDownRight,
+  FiAlertTriangle
 } from 'react-icons/fi'
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [dueRecurring, setDueRecurring] = useState<RecurringTransaction[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadDashboardData = async () => {
@@ -31,6 +36,12 @@ export default function DashboardPage() {
       console.error('Error cargando datos locales', e)
     } finally {
       setLoading(false)
+    }
+    // Recurrentes pendientes (tabla opcional: no romper si aún no existe)
+    try {
+      setDueRecurring(await LocalDB.getDueRecurring())
+    } catch {
+      setDueRecurring([])
     }
   }
 
@@ -81,6 +92,45 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
 
+  // --- COMPARACIÓN CON EL MES ANTERIOR ---
+  const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const prevMonthKey = prevMonthDate.toISOString().substring(0, 7)
+  const prevMonthTxs = transactions.filter((tx) => tx.date.startsWith(prevMonthKey))
+  const prevIncome = prevMonthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const prevExpense = prevMonthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const pctDelta = (cur: number, prev: number) => (prev > 0 ? ((cur - prev) / prev) * 100 : null)
+  const incomeDelta = pctDelta(totalIncome, prevIncome)
+  const expenseDelta = pctDelta(totalExpense, prevExpense)
+
+  // Categoría de mayor gasto del mes
+  const expenseByCat = new Map<string, number>()
+  currentMonthTxs.filter((t) => t.type === 'expense').forEach((t) => {
+    expenseByCat.set(t.category_id, (expenseByCat.get(t.category_id) || 0) + t.amount)
+  })
+  let topCat: { name: string; amount: number } | null = null
+  for (const [cid, amt] of expenseByCat) {
+    if (!topCat || amt > topCat.amount) {
+      topCat = { name: categories.find((c) => c.id === cid)?.name || 'Sin categoría', amount: amt }
+    }
+  }
+
+  // Alertas de presupuesto
+  const overBudget = budgetOverviews.filter((b) => b.amount > 0 && b.spent > b.amount)
+  const closeBudget = budgetOverviews.filter((b) => b.amount > 0 && b.percent >= 80 && b.spent <= b.amount)
+
+  // Formato compacto de porcentaje de cambio
+  const DeltaBadge = ({ delta, invert = false }: { delta: number | null; invert?: boolean }) => {
+    if (delta === null) return <span className="text-[10px] text-slate-500">sin dato previo</span>
+    const up = delta >= 0
+    const good = invert ? !up : up
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${good ? 'text-emerald-400' : 'text-rose-400'}`}>
+        {up ? <FiArrowUpRight className="w-3 h-3" /> : <FiArrowDownRight className="w-3 h-3" />}
+        {Math.abs(delta).toFixed(0)}% vs mes anterior
+      </span>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -108,6 +158,40 @@ export default function DashboardPage() {
           Nueva Transacción
         </Link>
       </div>
+
+      {/* BANNER: recurrentes pendientes por confirmar */}
+      {dueRecurring.length > 0 && (
+        <Link
+          href="/recurring"
+          className="flex items-center gap-3 bg-amber-500/5 border border-amber-500/30 rounded-md px-4 py-3 hover:bg-amber-500/10 transition-all"
+        >
+          <FiRepeat className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span className="text-xs text-slate-200 font-semibold">
+            Tienes <span className="text-amber-400 font-bold">{dueRecurring.length}</span> {dueRecurring.length === 1 ? 'transacción recurrente' : 'transacciones recurrentes'} por confirmar.
+          </span>
+          <span className="ml-auto text-[10px] font-bold text-amber-400">Revisar →</span>
+        </Link>
+      )}
+
+      {/* BANNER: presupuestos excedidos / cerca del límite */}
+      {(overBudget.length > 0 || closeBudget.length > 0) && (
+        <Link
+          href="/budgets"
+          className="flex items-center gap-3 bg-rose-500/5 border border-rose-500/30 rounded-md px-4 py-3 hover:bg-rose-500/10 transition-all"
+        >
+          <FiAlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+          <span className="text-xs text-slate-200 font-semibold">
+            {overBudget.length > 0 && (
+              <span><span className="text-rose-400 font-bold">{overBudget.length}</span> {overBudget.length === 1 ? 'presupuesto excedido' : 'presupuestos excedidos'}</span>
+            )}
+            {overBudget.length > 0 && closeBudget.length > 0 && <span> · </span>}
+            {closeBudget.length > 0 && (
+              <span><span className="text-amber-400 font-bold">{closeBudget.length}</span> cerca del límite</span>
+            )}
+          </span>
+          <span className="ml-auto text-[10px] font-bold text-rose-400">Ver →</span>
+        </Link>
+      )}
 
       {/* TARJETAS DE MÉTRICAS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -173,6 +257,34 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-3 font-semibold">Proporción de ahorro</p>
+        </div>
+      </div>
+
+      {/* RESUMEN DEL MES (comparación mes a mes) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-4">Resumen del Mes</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ingresos</span>
+            <p className="text-lg font-extrabold text-slate-100">${totalIncome.toLocaleString('es-ES')}</p>
+            <DeltaBadge delta={incomeDelta} />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Gastos</span>
+            <p className="text-lg font-extrabold text-slate-100">${totalExpense.toLocaleString('es-ES')}</p>
+            <DeltaBadge delta={expenseDelta} invert />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Mayor gasto</span>
+            {topCat ? (
+              <>
+                <p className="text-lg font-extrabold text-slate-100 truncate">{topCat.name}</p>
+                <span className="text-[10px] font-bold text-rose-400">${topCat.amount.toLocaleString('es-ES')}</span>
+              </>
+            ) : (
+              <p className="text-xs text-slate-500 italic mt-1">Sin gastos este mes</p>
+            )}
+          </div>
         </div>
       </div>
 

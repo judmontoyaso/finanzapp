@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { Category, Transaction, Budget, Workspace, SavingsGoal, WorkspaceMember } from '@/types'
+import { Category, Transaction, Budget, Workspace, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency } from '@/types'
 
 // Mock User Type
 export type User = {
@@ -65,6 +65,18 @@ export const CATEGORY_TEMPLATES: Record<WorkspaceType, SeedCategory[]> = {
     { name: 'Gastos Generales', type: 'expense' },
     { name: 'Otros Gastos', type: 'expense' },
   ],
+}
+
+// Avanza una fecha (YYYY-MM-DD) según la frecuencia de recurrencia
+export function advanceDate(dateStr: string, frequency: RecurringFrequency): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  switch (frequency) {
+    case 'weekly': d.setDate(d.getDate() + 7); break
+    case 'biweekly': d.setDate(d.getDate() + 14); break
+    case 'monthly': d.setMonth(d.getMonth() + 1); break
+    case 'yearly': d.setFullYear(d.getFullYear() + 1); break
+  }
+  return d.toISOString().split('T')[0]
 }
 
 const supabase = createClient()
@@ -486,6 +498,88 @@ export const LocalDB = {
 
     if (error) throw error
     this.dispatchEvent()
+  },
+
+  // --- RECURRING TRANSACTIONS (recurrentes con confirmación) ---
+  async getRecurring(): Promise<RecurringTransaction[]> {
+    const activeWs = this.getActiveWorkspaceId()
+    if (!activeWs) return []
+
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .select('*')
+      .eq('workspace_id', activeWs)
+      .order('next_date', { ascending: true })
+
+    if (error) throw error
+    return data as RecurringTransaction[]
+  },
+
+  // Recurrentes activas cuya próxima fecha ya llegó (pendientes por confirmar)
+  async getDueRecurring(): Promise<RecurringTransaction[]> {
+    const all = await this.getRecurring()
+    const today = new Date().toISOString().split('T')[0]
+    return all.filter(r => r.active && r.next_date <= today)
+  },
+
+  async addRecurring(payload: {
+    description: string
+    amount: number
+    type: 'income' | 'expense'
+    category_id: string | null
+    frequency: RecurringFrequency
+    next_date: string
+  }): Promise<RecurringTransaction> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+    const activeWs = this.getActiveWorkspaceId()
+    if (!activeWs) throw new Error('No hay espacio activo')
+
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .insert({ ...payload, active: true, workspace_id: activeWs, user_id: user.id })
+      .select()
+
+    if (error) throw error
+    this.dispatchEvent()
+    return (data && data[0]) as RecurringTransaction
+  },
+
+  async updateRecurring(id: string, patch: Partial<RecurringTransaction>): Promise<void> {
+    const { error } = await supabase
+      .from('recurring_transactions')
+      .update(patch)
+      .eq('id', id)
+
+    if (error) throw error
+    this.dispatchEvent()
+  },
+
+  async deleteRecurring(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('recurring_transactions')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    this.dispatchEvent()
+  },
+
+  // Confirmar: crea la transacción real y avanza la próxima fecha
+  async confirmRecurring(rec: RecurringTransaction): Promise<void> {
+    await this.addTransaction({
+      description: rec.description,
+      amount: rec.amount,
+      type: rec.type,
+      category_id: rec.category_id || '',
+      date: rec.next_date,
+    })
+    await this.updateRecurring(rec.id, { next_date: advanceDate(rec.next_date, rec.frequency) })
+  },
+
+  // Posponer: avanza la próxima fecha sin registrar la transacción
+  async skipRecurring(rec: RecurringTransaction): Promise<void> {
+    await this.updateRecurring(rec.id, { next_date: advanceDate(rec.next_date, rec.frequency) })
   },
 
   // --- RESPALDOS JSON ---

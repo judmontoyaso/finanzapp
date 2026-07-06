@@ -15,6 +15,7 @@ import {
   FiFolder,
   FiTrendingUp,
   FiTag,
+  FiRepeat,
   FiLogOut,
   FiBriefcase,
   FiPlus,
@@ -26,6 +27,7 @@ import {
 const NAV_ITEMS = [
   { label: 'Panel Principal', href: '/dashboard', icon: FiGrid },
   { label: 'Transacciones', href: '/transactions', icon: FiDollarSign },
+  { label: 'Recurrentes', href: '/recurring', icon: FiRepeat },
   { label: 'Presupuestos', href: '/budgets', icon: FiFolder },
   { label: 'Metas de Ahorro', href: '/savings', icon: FiTrendingUp },
   { label: 'Categorías', href: '/categories', icon: FiTag },
