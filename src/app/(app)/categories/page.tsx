@@ -106,8 +106,12 @@ export default function CategoriesPage() {
               <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Categorías de Gastos</h2>
               <p className="text-[10px] text-slate-500">Etiquetas aplicables a tus egresos mensuales</p>
             </div>
+            <span className="ml-auto text-[11px] font-black text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-md px-2 py-0.5">{expenseCats.length}</span>
           </div>
 
+          {expenseCats.length === 0 ? (
+            <p className="text-center text-xs text-slate-500 italic py-8">No hay categorías de gastos.</p>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
             {expenseCats.map((cat) => {
               const isCustom = cat.user_id !== null && cat.user_id !== undefined
@@ -138,6 +142,7 @@ export default function CategoriesPage() {
               )
             })}
           </div>
+          )}
         </div>
 
         {/* CATEGORÍAS DE INGRESOS */}
@@ -150,8 +155,12 @@ export default function CategoriesPage() {
               <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Categorías de Ingresos</h2>
               <p className="text-[10px] text-slate-500">Etiquetas aplicables a tus depósitos y entradas</p>
             </div>
+            <span className="ml-auto text-[11px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-2 py-0.5">{incomeCats.length}</span>
           </div>
 
+          {incomeCats.length === 0 ? (
+            <p className="text-center text-xs text-slate-500 italic py-8">No hay categorías de ingresos.</p>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
             {incomeCats.map((cat) => {
               const isCustom = cat.user_id !== null && cat.user_id !== undefined
@@ -182,6 +191,7 @@ export default function CategoriesPage() {
               )
             })}
           </div>
+          )}
         </div>
 
       </div>

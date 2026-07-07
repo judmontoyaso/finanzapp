@@ -243,7 +243,12 @@ export default function SavingsPage() {
                 {/* Detalles de la meta */}
                 <div className="flex-1 space-y-3.5 text-center sm:text-left w-full">
                   <div>
-                    <h3 className="font-bold text-slate-100 text-sm">{g.name}</h3>
+                    <div className="flex items-center gap-2 justify-center sm:justify-start">
+                      <h3 className="font-bold text-slate-100 text-sm">{g.name}</h3>
+                      {percent >= 100 && (
+                        <span className="text-[9px] font-black uppercase tracking-wide text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-1.5 py-0.5">Completada</span>
+                      )}
+                    </div>
                     {g.target_date && (
                       <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
                         Límite: {new Date(g.target_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -276,7 +281,8 @@ export default function SavingsPage() {
                     </button>
                     <button
                       onClick={() => handleOpenAction(g, 'withdraw')}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-slate-950 hover:bg-slate-850 text-slate-300 border border-slate-850 rounded-md text-[10px] font-bold active:scale-[0.99] transition-all cursor-pointer"
+                      disabled={g.current_amount <= 0}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-slate-950 hover:bg-slate-850 text-slate-300 border border-slate-850 rounded-md text-[10px] font-bold active:scale-[0.99] transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <FiArrowDownLeft /> Retirar
                     </button>
