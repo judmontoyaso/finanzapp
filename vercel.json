@@ -1,6 +1,5 @@
 {
   "crons": [
-    { "path": "/api/cron/budget-alerts", "schedule": "0 13 * * 1" },
-    { "path": "/api/cron/monthly-summary", "schedule": "0 13 1 * *" }
+    { "path": "/api/cron/daily", "schedule": "0 13 * * *" }
   ]
 }

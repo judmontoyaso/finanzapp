@@ -51,6 +51,14 @@ export type Budget = {
   created_at: string
 }
 
+export type ReportSettings = {
+  workspace_id: string
+  enabled: boolean
+  period_days: number
+  next_run: string
+  created_at?: string
+}
+
 export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
 
 export type RecurringTransaction = {

@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { Category, Transaction, Budget, Workspace, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency } from '@/types'
+import { Category, Transaction, Budget, Workspace, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency, ReportSettings } from '@/types'
 
 // Mock User Type
 export type User = {
@@ -619,6 +619,29 @@ export const LocalDB = {
   // Posponer: avanza la próxima fecha sin registrar la transacción
   async skipRecurring(rec: RecurringTransaction): Promise<void> {
     await this.updateRecurring(rec.id, { next_date: advanceDate(rec.next_date, rec.frequency) })
+  },
+
+  // --- CONFIG DE REPORTES IA ---
+  async getReportSettings(): Promise<ReportSettings | null> {
+    const activeWs = this.getActiveWorkspaceId()
+    if (!activeWs) return null
+    const { data, error } = await supabase
+      .from('report_settings')
+      .select('*')
+      .eq('workspace_id', activeWs)
+      .maybeSingle()
+    if (error) throw error
+    return (data as ReportSettings) || null
+  },
+
+  async saveReportSettings(settings: { enabled: boolean; period_days: number; next_run: string }): Promise<void> {
+    const activeWs = this.getActiveWorkspaceId()
+    if (!activeWs) throw new Error('No hay espacio activo')
+    const { error } = await supabase
+      .from('report_settings')
+      .upsert({ workspace_id: activeWs, ...settings }, { onConflict: 'workspace_id' })
+    if (error) throw error
+    this.dispatchEvent()
   },
 
   // --- RESPALDOS JSON ---

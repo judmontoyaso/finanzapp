@@ -208,6 +208,58 @@ export function monthlySummaryEmail(opts: {
   }
 }
 
+// Convierte texto plano del modelo (con saltos de línea y viñetas) a HTML simple
+export function textToHtml(text: string): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return text
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block.split('\n').filter((l) => l.trim())
+      const isList = lines.every((l) => /^\s*[-*•]/.test(l))
+      if (isList) {
+        const items = lines.map((l) => `<li style="margin:0 0 4px">${esc(l.replace(/^\s*[-*•]\s?/, ''))}</li>`).join('')
+        return `<ul style="margin:0 0 12px;padding-left:18px;color:${MUTED};font-size:13px;line-height:1.7">${items}</ul>`
+      }
+      const html = esc(block).replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, `<strong style="color:${TEXT}">$1</strong>`)
+      return `<p style="margin:0 0 12px;font-size:13px;line-height:1.7;color:${MUTED}">${html}</p>`
+    })
+    .join('')
+}
+
+export function reportEmail(opts: {
+  workspaceName: string
+  periodLabel: string
+  income: number
+  expense: number
+  net: number
+  savingsRate: number
+  topCategory: { name: string; amount: number } | null
+  narrative: string
+  appUrl: string
+}): EmailContent {
+  const stat = (label: string, value: string, color: string) =>
+    `<td style="padding:0 5px" width="25%"><div style="background:${BG};border:1px solid ${BORDER};border-radius:10px;padding:12px 8px;text-align:center"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:${MUTED};font-weight:700">${label}</div><div style="font-size:14px;font-weight:800;color:${color};margin-top:4px">${value}</div></div></td>`
+  return {
+    subject: `Tu reporte financiero · ${opts.workspaceName} (${opts.periodLabel})`,
+    html: baseLayout({
+      preheader: `Análisis y recomendaciones de ${opts.periodLabel}.`,
+      heading: `Reporte financiero`,
+      body:
+        paragraph(`Periodo <strong>${opts.periodLabel}</strong> · espacio <strong>"${opts.workspaceName}"</strong>.`) +
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 18px"><tr>
+          ${stat('Ingresos', money(opts.income), ACCENT)}
+          ${stat('Gastos', money(opts.expense), '#e11d48')}
+          ${stat('Balance', money(opts.net), opts.net >= 0 ? ACCENT_DARK : '#d97706')}
+          ${stat('Ahorro', `${opts.savingsRate.toFixed(0)}%`, '#2563eb')}
+        </tr></table>` +
+        (opts.topCategory ? paragraph(`Mayor gasto: <strong>${opts.topCategory.name}</strong> (${money(opts.topCategory.amount)}).`) : '') +
+        `<div style="height:1px;background:${BORDER};margin:8px 0 18px"></div>` +
+        textToHtml(opts.narrative) +
+        button('Ver mi panel', `${opts.appUrl}/dashboard`),
+    }),
+  }
+}
+
 export function genericNotification(opts: {
   title: string
   message: string
