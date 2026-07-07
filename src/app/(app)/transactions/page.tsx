@@ -15,8 +15,32 @@ import {
   FiChevronRight,
   FiChevronDown,
   FiFilter,
+  FiCamera,
   FiX
 } from 'react-icons/fi'
+
+// Reduce y convierte una imagen a data URL JPEG (para no subir fotos pesadas)
+function fileToScaledDataURL(file: File, maxDim = 1100, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject(new Error('no ctx'))
+      ctx.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -37,9 +61,13 @@ export default function TransactionsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  // Tipo seleccionado en el modal (para filtrar categorías por tipo)
+  // Formulario de añadir (controlado, para poder prellenar al escanear)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
   const [formCategory, setFormCategory] = useState('')
+  const [formDesc, setFormDesc] = useState('')
+  const [formAmount, setFormAmount] = useState('')
+  const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  const [scanning, setScanning] = useState(false)
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
@@ -99,7 +127,47 @@ export default function TransactionsPage() {
   const openAddModal = () => {
     setFormType('expense')
     setFormCategory(expenseCats[0]?.id || '')
+    setFormDesc('')
+    setFormAmount('')
+    setFormDate(new Date().toISOString().slice(0, 10))
     setIsAddModalOpen(true)
+  }
+
+  // Escanear recibo: sube la foto, prellena el formulario y abre el modal
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setScanning(true)
+    try {
+      const image = await fileToScaledDataURL(file)
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'No se pudo escanear el recibo')
+        return
+      }
+      setFormType('expense')
+      setFormDesc(data.description || '')
+      setFormAmount(data.amount != null ? String(data.amount) : '')
+      setFormDate(data.date || new Date().toISOString().slice(0, 10))
+      // Emparejar categoría sugerida con una existente de gasto
+      const sug = String(data.category || '').toLowerCase()
+      const match =
+        expenseCats.find((c) => sug && c.name.toLowerCase().includes(sug)) ||
+        expenseCats.find((c) => sug && sug.includes(c.name.toLowerCase().split(/[\s/]/)[0]))
+      setFormCategory(match?.id || expenseCats[0]?.id || '')
+      setIsAddModalOpen(true)
+      toast.success('Recibo leído. Revisa y confirma.')
+    } catch {
+      toast.error('Error al procesar la imagen')
+    } finally {
+      setScanning(false)
+    }
   }
 
   const changeFormType = (t: 'income' | 'expense') => {
@@ -127,26 +195,20 @@ export default function TransactionsPage() {
   // --- CRUD ACTIONS ---
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    
-    const amountStr = formData.get('amount') as string
-    const category_id = formData.get('category_id') as string
-    const type = formData.get('type') as 'income' | 'expense'
-    const date = formData.get('date') as string
-    const description = formData.get('description') as string
-
-    if (!amountStr || !category_id || !type || !date || !description) return
-
+    const amount = parseFloat(formAmount)
+    if (!formDesc.trim() || isNaN(amount) || amount <= 0 || !formCategory || !formDate) {
+      toast.error('Completa descripción, monto, categoría y fecha')
+      return
+    }
     try {
       await LocalDB.addTransaction({
-        description,
-        amount: parseFloat(amountStr),
-        type,
-        category_id,
-        date
+        description: formDesc.trim(),
+        amount,
+        type: formType,
+        category_id: formCategory,
+        date: formDate,
       })
       setIsAddModalOpen(false)
-      e.currentTarget.reset()
       toast.success('Movimiento registrado con éxito')
     } catch {
       toast.error('Error al guardar movimiento')
@@ -255,7 +317,20 @@ export default function TransactionsPage() {
             <FiDownload className="w-4 h-4" />
             Exportar CSV
           </button>
-          
+
+          <label className={`flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2.5 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer ${scanning ? 'opacity-60 pointer-events-none' : ''}`}>
+            {scanning ? (
+              <svg className="animate-spin h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            ) : (
+              <FiCamera className="w-4 h-4" />
+            )}
+            {scanning ? 'Leyendo...' : 'Escanear'}
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} disabled={scanning} />
+          </label>
+
           <button
             onClick={openAddModal}
             className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer"
@@ -504,9 +579,10 @@ export default function TransactionsPage() {
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Descripción</label>
                 <input
                   type="text"
-                  name="description"
                   required
                   placeholder="Ej. Compra de insumos"
+                  value={formDesc}
+                  onChange={(e) => setFormDesc(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
@@ -516,10 +592,11 @@ export default function TransactionsPage() {
                   <label className="block text-xs font-semibold text-slate-400 mb-1.5">Monto ($)</label>
                   <input
                     type="number"
-                    name="amount"
                     step="0.01"
                     required
                     placeholder="0.00"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
@@ -527,9 +604,9 @@ export default function TransactionsPage() {
                   <label className="block text-xs font-semibold text-slate-400 mb-1.5">Fecha</label>
                   <input
                     type="date"
-                    name="date"
                     required
-                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   />
                 </div>
