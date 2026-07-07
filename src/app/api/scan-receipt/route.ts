@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Escaneo no configurado (falta OPENAI_API_KEY).' }, { status: 501 })
   }
 
-  let body: { image?: string }
+  let body: { image?: string; categories?: string[] }
   try {
     body = await request.json()
   } catch {
@@ -26,11 +26,17 @@ export async function POST(request: Request) {
   }
 
   const today = new Date().toISOString().split('T')[0]
+  const cats = Array.isArray(body.categories) ? body.categories.filter(Boolean).slice(0, 40) : []
+  const catInstruction = cats.length
+    ? `"category": elige EXACTAMENTE una de esta lista (o null si ninguna aplica): ${JSON.stringify(cats)}.`
+    : '"category": categoría de gasto sugerida en español (o null).'
   const prompt =
-    'Eres un extractor de datos de recibos/facturas. Devuelve SOLO un JSON con: ' +
-    '"amount" (número, el total pagado), "date" (YYYY-MM-DD; si no aparece usa ' + today + '), ' +
-    '"description" (nombre corto del comercio o compra), "category" (categoría de gasto sugerida en español, ' +
-    'ej: Alimentación, Transporte, Salud, Entretenimiento). Si algo no se ve, usa null.'
+    'Eres un extractor de datos de recibos/facturas. Devuelve SOLO un JSON con estos campos: ' +
+    '"amount" (número, el total pagado, sin símbolos ni separadores de miles), ' +
+    '"date" (YYYY-MM-DD; LEE la fecha EXACTAMENTE como está impresa, incluido el año; NO la inventes ni la corrijas; si no aparece usa ' + today + '), ' +
+    '"description" (nombre corto del comercio o de la compra), ' +
+    catInstruction +
+    ' Si algún dato no se ve, usa null.'
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -44,7 +50,7 @@ export async function POST(request: Request) {
             role: 'user',
             content: [
               { type: 'text', text: 'Extrae los datos de este recibo.' },
-              { type: 'image_url', image_url: { url: image, detail: 'low' } },
+              { type: 'image_url', image_url: { url: image, detail: 'high' } },
             ],
           },
         ],

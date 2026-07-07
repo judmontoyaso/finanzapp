@@ -144,7 +144,7 @@ export default function TransactionsPage() {
       const res = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image }),
+        body: JSON.stringify({ image, categories: expenseCats.map((c) => c.name) }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -155,11 +155,11 @@ export default function TransactionsPage() {
       setFormDesc(data.description || '')
       setFormAmount(data.amount != null ? String(data.amount) : '')
       setFormDate(data.date || new Date().toISOString().slice(0, 10))
-      // Emparejar categoría sugerida con una existente de gasto
-      const sug = String(data.category || '').toLowerCase()
+      // El modelo elige de la lista real -> match exacto por nombre
+      const sug = String(data.category || '').toLowerCase().trim()
       const match =
-        expenseCats.find((c) => sug && c.name.toLowerCase().includes(sug)) ||
-        expenseCats.find((c) => sug && sug.includes(c.name.toLowerCase().split(/[\s/]/)[0]))
+        expenseCats.find((c) => c.name.toLowerCase() === sug) ||
+        expenseCats.find((c) => sug && c.name.toLowerCase().includes(sug))
       setFormCategory(match?.id || expenseCats[0]?.id || '')
       setIsAddModalOpen(true)
       toast.success('Recibo leído. Revisa y confirma.')
