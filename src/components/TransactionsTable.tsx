@@ -37,7 +37,18 @@ export default function TransactionsTable({
           new Date(i.getValue()).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
         sortingFn: 'alphanumeric',
       }),
-      col.accessor('description', { header: 'Descripción', cell: (i) => <span className="font-semibold text-slate-100">{i.getValue()}</span> }),
+      col.accessor('description', {
+        header: 'Descripción',
+        cell: (i) => {
+          const n = i.row.original.details?.length || 0
+          return (
+            <span className="font-semibold text-slate-100">
+              {i.getValue()}
+              {n > 0 && <span className="ml-2 text-[9px] font-bold text-emerald-500">{n} ítem{n > 1 ? 's' : ''}</span>}
+            </span>
+          )
+        },
+      }),
       col.accessor('category_id', {
         header: 'Categoría',
         enableSorting: false,

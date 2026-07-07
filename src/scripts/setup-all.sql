@@ -134,3 +134,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA finanzas GRANT ALL ON SEQUENCES TO service_ro
 -- ---------- 5. Nombre de espacio único por dueño (case-insensitive) ----------
 CREATE UNIQUE INDEX IF NOT EXISTS workspaces_user_name_uniq
     ON finanzas.workspaces (user_id, lower(name));
+
+-- ---------- 6. Detalle (ítems) de transacción ----------
+ALTER TABLE finanzas.transactions ADD COLUMN IF NOT EXISTS details jsonb;

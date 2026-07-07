@@ -36,7 +36,8 @@ export async function POST(request: Request) {
     '"date" (YYYY-MM-DD; LEE la fecha EXACTAMENTE como está impresa, incluido el año; NO la inventes ni la corrijas; si no aparece usa ' + today + '), ' +
     '"description" (nombre corto del comercio o de la compra), ' +
     catInstruction +
-    ' Si algún dato no se ve, usa null.'
+    ' "items": arreglo con las líneas del recibo, cada una {"description": nombre del producto, "amount": precio de esa línea como número}. ' +
+    'Si no puedes leer las líneas, usa []. Si algún dato no se ve, usa null.'
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -67,12 +68,25 @@ export async function POST(request: Request) {
 
     const data = await res.json()
     const content = data.choices?.[0]?.message?.content
-    let parsed: { amount?: number; date?: string; description?: string; category?: string } = {}
+    let parsed: {
+      amount?: number
+      date?: string
+      description?: string
+      category?: string
+      items?: { description?: string; amount?: number }[]
+    } = {}
     try {
       parsed = JSON.parse(content)
     } catch {
       return NextResponse.json({ error: 'Respuesta no parseable' }, { status: 502 })
     }
+
+    const items = Array.isArray(parsed.items)
+      ? parsed.items
+          .filter((it) => it && (it.description || typeof it.amount === 'number'))
+          .map((it) => ({ description: String(it.description || '').slice(0, 120), amount: typeof it.amount === 'number' ? it.amount : 0 }))
+          .slice(0, 50)
+      : []
 
     return NextResponse.json({
       ok: true,
@@ -80,6 +94,7 @@ export async function POST(request: Request) {
       date: parsed.date || today,
       description: parsed.description || '',
       category: parsed.category || '',
+      items,
     })
   } catch {
     return NextResponse.json({ error: 'Error de red con el modelo' }, { status: 502 })

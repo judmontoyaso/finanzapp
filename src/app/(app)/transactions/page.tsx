@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { LocalDB } from '@/lib/db'
-import { Transaction, Category } from '@/types'
+import { Transaction, Category, TransactionItem } from '@/types'
 import { toast } from 'react-hot-toast'
 import {
   FiPlus,
@@ -14,6 +14,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiChevronDown,
+  FiChevronUp,
   FiFilter,
   FiCamera,
   FiArrowUpRight,
@@ -75,7 +76,10 @@ export default function TransactionsPage() {
   const [formDesc, setFormDesc] = useState('')
   const [formAmount, setFormAmount] = useState('')
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  const [formItems, setFormItems] = useState<TransactionItem[]>([])
   const [scanning, setScanning] = useState(false)
+  // Fila expandida en la lista (para ver el detalle)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
@@ -148,8 +152,20 @@ export default function TransactionsPage() {
     setFormDesc('')
     setFormAmount('')
     setFormDate(new Date().toISOString().slice(0, 10))
+    setFormItems([])
     setIsAddModalOpen(true)
   }
+
+  // --- Editor de ítems (detalle) ---
+  const addItem = () => setFormItems((p) => [...p, { description: '', amount: 0 }])
+  const removeItem = (idx: number) => setFormItems((p) => p.filter((_, i) => i !== idx))
+  const updateItem = (idx: number, patch: Partial<TransactionItem>) =>
+    setFormItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+  const cleanItems = () =>
+    formItems
+      .map((it) => ({ description: it.description.trim(), amount: Number(it.amount) || 0 }))
+      .filter((it) => it.description || it.amount)
+  const itemsSum = formItems.reduce((s, it) => s + (Number(it.amount) || 0), 0)
 
   // Escanear recibo: sube la foto, prellena el formulario y abre el modal
   const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +189,11 @@ export default function TransactionsPage() {
       setFormDesc(data.description || '')
       setFormAmount(data.amount != null ? String(data.amount) : '')
       setFormDate(data.date || new Date().toISOString().slice(0, 10))
+      setFormItems(
+        Array.isArray(data.items)
+          ? data.items.map((it: TransactionItem) => ({ description: String(it.description || ''), amount: Number(it.amount) || 0 }))
+          : []
+      )
       // El modelo elige de la lista real -> match exacto por nombre
       const sug = String(data.category || '').toLowerCase().trim()
       const match =
@@ -218,6 +239,7 @@ export default function TransactionsPage() {
       toast.error('Completa descripción, monto, categoría y fecha')
       return
     }
+    const items = cleanItems()
     try {
       await LocalDB.addTransaction({
         description: formDesc.trim(),
@@ -225,6 +247,7 @@ export default function TransactionsPage() {
         type: formType,
         category_id: formCategory,
         date: formDate,
+        details: items.length ? items : null,
       })
       setIsAddModalOpen(false)
       toast.success('Movimiento registrado con éxito')
@@ -237,6 +260,7 @@ export default function TransactionsPage() {
     setEditingTransaction(tx)
     setFormType(tx.type)
     setFormCategory(tx.category_id)
+    setFormItems(tx.details ? tx.details.map((it) => ({ ...it })) : [])
     setIsEditModalOpen(true)
   }
 
@@ -253,13 +277,15 @@ export default function TransactionsPage() {
 
     if (!amountStr || !category_id || !type || !date || !description) return
 
+    const items = cleanItems()
     try {
       await LocalDB.updateTransaction(editingTransaction.id, {
         description,
         amount: parseFloat(amountStr),
         type,
         category_id,
-        date
+        date,
+        details: items.length ? items : null,
       })
       setIsEditModalOpen(false)
       setEditingTransaction(null)
@@ -317,6 +343,48 @@ export default function TransactionsPage() {
       </div>
     )
   }
+
+  // Editor de detalle (ítems) reutilizado en ambos modales
+  const itemsEditor = (
+    <div className="border-t border-slate-800 pt-4">
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs font-semibold text-slate-400">Detalle (opcional)</label>
+        <span className="text-[10px] text-slate-500">
+          Suma ítems: <span className="font-bold text-slate-300">${itemsSum.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+        </span>
+      </div>
+      <div className="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1">
+        {formItems.length === 0 && (
+          <p className="text-[10px] text-slate-500 italic">Agrega los productos/líneas del recibo para más control.</p>
+        )}
+        {formItems.map((it, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Producto / concepto"
+              value={it.description}
+              onChange={(e) => updateItem(idx, { description: e.target.value })}
+              className="flex-1 bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={it.amount || ''}
+              onChange={(e) => updateItem(idx, { amount: parseFloat(e.target.value) || 0 })}
+              className="w-24 bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none"
+            />
+            <button type="button" onClick={() => removeItem(idx)} className="p-1.5 text-slate-500 hover:text-rose-400 rounded-md hover:bg-slate-800 cursor-pointer">
+              <FiX className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={addItem} className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-400 cursor-pointer">
+        <FiPlus className="w-3 h-3" /> Agregar ítem
+      </button>
+    </div>
+  )
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -501,47 +569,72 @@ export default function TransactionsPage() {
               const category = categories.find((c) => c.id === tx.category_id)
               const isIncome = tx.type === 'income'
               const Arrow = isIncome ? FiArrowUpRight : FiArrowDownLeft
+              const hasDetail = !!tx.details && tx.details.length > 0
+              const isExpanded = expandedId === tx.id
               return (
-                <div key={tx.id} className="group flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  {/* Icono por tipo */}
-                  <span className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                    <Arrow className="w-4 h-4" />
-                  </span>
+                <div key={tx.id} className="py-3 first:pt-0 last:pb-0">
+                  <div className="group flex items-center gap-3">
+                    {/* Icono por tipo */}
+                    <span className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                      <Arrow className="w-4 h-4" />
+                    </span>
 
-                  {/* Descripción + categoría/fecha */}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
-                      <span className="truncate">{category ? category.name : 'Sin categoría'}</span>
-                      <span className="text-slate-700">•</span>
-                      <span className="whitespace-nowrap">
-                        {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
+                    {/* Descripción + categoría/fecha */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
+                        <span className="truncate">{category ? category.name : 'Sin categoría'}</span>
+                        <span className="text-slate-700">•</span>
+                        <span className="whitespace-nowrap">
+                          {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                        {hasDetail && (
+                          <button
+                            onClick={() => setExpandedId(isExpanded ? null : tx.id)}
+                            className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 hover:text-emerald-400 font-bold cursor-pointer"
+                          >
+                            {isExpanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
+                            {tx.details!.length} ítem{tx.details!.length > 1 ? 's' : ''}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Monto */}
+                    <span className={`text-sm font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                    </span>
+
+                    {/* Acciones */}
+                    <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEditOpen(tx)}
+                        title="Editar"
+                        className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                      >
+                        <FiEdit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(tx.id)}
+                        title="Eliminar"
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Monto */}
-                  <span className={`text-sm font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                  </span>
-
-                  {/* Acciones (aparecen al pasar el mouse en desktop; siempre en móvil) */}
-                  <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleEditOpen(tx)}
-                      title="Editar"
-                      className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
-                    >
-                      <FiEdit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(tx.id)}
-                      title="Eliminar"
-                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {/* Detalle expandido */}
+                  {hasDetail && isExpanded && (
+                    <div className="mt-2 ml-12 bg-slate-950 border border-slate-800 rounded-md p-3 space-y-1.5">
+                      {tx.details!.map((it, i) => (
+                        <div key={i} className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-300 truncate pr-3">{it.description || 'Ítem'}</span>
+                          <span className="text-slate-400 font-semibold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -674,6 +767,8 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
+              {itemsEditor}
+
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
@@ -777,6 +872,8 @@ export default function TransactionsPage() {
                   </select>
                 </div>
               </div>
+
+              {itemsEditor}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button

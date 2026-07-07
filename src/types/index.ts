@@ -22,6 +22,11 @@ export type Category = {
   created_at: string
 }
 
+export type TransactionItem = {
+  description: string
+  amount: number
+}
+
 export type Transaction = {
   id: string
   description: string
@@ -31,6 +36,7 @@ export type Transaction = {
   workspace_id: string
   user_id: string
   date: string
+  details?: TransactionItem[] | null
   created_at: string
 }
 
