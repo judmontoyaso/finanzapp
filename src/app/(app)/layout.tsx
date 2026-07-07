@@ -149,9 +149,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newWsName.trim()) return
+    const name = newWsName.trim()
+    if (!name) return
+    // Evitar nombres duplicados entre los espacios que posee el usuario
+    const dup = workspaces.some(
+      (w) => w.user_id === user?.id && w.name.trim().toLowerCase() === name.toLowerCase()
+    )
+    if (dup) {
+      toast.error('Ya tienes un espacio con ese nombre')
+      return
+    }
     try {
-      const ws = await LocalDB.addWorkspace(newWsName.trim(), newWsType)
+      const ws = await LocalDB.addWorkspace(name, newWsType)
       LocalDB.setActiveWorkspaceId(ws.id)
       setActiveWorkspaceId(ws.id)
       setNewWsName('')
