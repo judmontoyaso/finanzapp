@@ -508,7 +508,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto bg-slate-950 pt-14 md:pt-0">
         {/* Active workspace bar (avoids confusion when switching) */}
         {activeWorkspace && (
-          <div className="sticky top-14 md:top-0 z-20 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-6 md:px-8 py-3 flex items-center gap-3">
+          <div className="md:sticky md:top-0 z-20 bg-slate-900 md:bg-slate-900/90 md:backdrop-blur border-b border-slate-800 px-6 md:px-8 py-3 flex items-center gap-3">
             {(() => {
               const Icon = wsTypeMeta(activeWorkspace.type).Icon
               return <Icon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
