@@ -167,8 +167,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setNewWsType('home')
       setIsWsModalOpen(false)
       toast.success('Espacio de trabajo creado con éxito')
-    } catch {
-      toast.error('Error al crear espacio de trabajo')
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : ''
+      toast.error(raw.includes('duplicate') || raw.includes('workspaces_user_name_uniq')
+        ? 'Ya tienes un espacio con ese nombre'
+        : 'Error al crear espacio de trabajo')
     }
   }
 

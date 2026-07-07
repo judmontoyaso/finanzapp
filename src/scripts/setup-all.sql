@@ -130,3 +130,7 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA finanzas TO service_role;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA finanzas TO service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA finanzas GRANT ALL ON TABLES TO service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA finanzas GRANT ALL ON SEQUENCES TO service_role;
+
+-- ---------- 5. Nombre de espacio único por dueño (case-insensitive) ----------
+CREATE UNIQUE INDEX IF NOT EXISTS workspaces_user_name_uniq
+    ON finanzas.workspaces (user_id, lower(name));
