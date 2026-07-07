@@ -9,6 +9,8 @@ const MUTED = '#64748b'
 const BORDER = '#e2e8f0'
 const BG = '#f1f5f9'
 const CARD = '#ffffff'
+// URL pública para imágenes del correo (los clientes no cargan data URIs)
+const APP = process.env.APP_URL || 'https://arcafinanzas.vercel.app'
 
 const money = (n: number) =>
   '$' + n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -34,7 +36,7 @@ function baseLayout(opts: { preheader?: string; heading: string; body: string })
           <td style="padding:24px 32px;border-bottom:1px solid ${BORDER};">
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width:34px;height:34px;background:${ACCENT};border-radius:8px;text-align:center;vertical-align:middle;color:#fff;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:16px;">A</td>
+                <td style="width:40px;vertical-align:middle;"><img src="${APP}/logo.png" width="40" height="40" alt="Arca Finanzas" style="display:block;border:0;" /></td>
                 <td style="padding-left:12px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:800;color:${TEXT};">Arca<span style="color:${ACCENT};">Finanzas</span></td>
               </tr>
             </table>
@@ -89,10 +91,10 @@ export function welcomeEmail(name: string, appUrl: string): EmailContent {
   }
 }
 
-function featureRow(title: string, desc: string): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;"><tr>
-    <td style="width:8px;vertical-align:top;padding-top:6px;"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:${ACCENT};"></span></td>
-    <td style="padding-left:10px;font-family:Arial,Helvetica,sans-serif;">
+function featureRow(icon: string, title: string, desc: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;"><tr>
+    <td style="width:30px;vertical-align:top;"><img src="${APP}/icons/${icon}" width="26" height="26" alt="" style="display:block;border:0;" /></td>
+    <td style="padding-left:12px;font-family:Arial,Helvetica,sans-serif;">
       <div style="font-size:13px;font-weight:700;color:${TEXT};">${title}</div>
       <div style="font-size:12px;line-height:1.6;color:${MUTED};">${desc}</div>
     </td>
@@ -107,15 +109,15 @@ export function featuresAnnouncementEmail(name: string, appUrl: string): EmailCo
       heading: `Hola ${name}, esto es lo que puedes hacer`,
       body:
         paragraph('Reunimos en un solo lugar todo para controlar tu dinero. Un repaso rápido:') +
-        featureRow('Espacios de trabajo', 'Separa tus finanzas: personal, hogar o negocio, cada uno con sus categorías.') +
-        featureRow('Compartir en equipo', 'Invita personas por correo a un espacio (no al personal) para gestionarlo juntos.') +
-        featureRow('Transacciones y categorías', 'Registra ingresos y gastos y organízalos por categoría.') +
-        featureRow('Recurrentes con confirmación', 'Salario, arriendo o suscripciones: te avisamos y confirmas antes de registrar.') +
-        featureRow('Presupuestos con alertas', 'Fija límites por categoría y recibe aviso al acercarte o pasarte.') +
-        featureRow('Metas de ahorro', 'Define objetivos y sigue tu progreso.') +
-        featureRow('Panel e informes', 'Gráficos, comparación mes a mes y balance por espacio.') +
-        featureRow('Avisos por correo', 'Alertas de presupuesto y resumen mensual directo a tu bandeja.') +
-        featureRow('Instalable y modo claro/oscuro', 'Úsala como app en tu celular, con el tema que prefieras.') +
+        featureRow('planning.png', 'Espacios de trabajo', 'Separa tus finanzas: personal, hogar o negocio, cada uno con sus categorías.') +
+        featureRow('award.png', 'Compartir en equipo', 'Invita personas por correo a un espacio (no al personal) para gestionarlo juntos.') +
+        featureRow('money-flow.png', 'Transacciones y categorías', 'Registra ingresos y gastos y organízalos por categoría.') +
+        featureRow('forecast.png', 'Recurrentes con confirmación', 'Salario, arriendo o suscripciones: te avisamos y confirmas antes de registrar.') +
+        featureRow('invoice.png', 'Presupuestos con alertas', 'Fija límites por categoría y recibe aviso al acercarte o pasarte.') +
+        featureRow('gold-ingots.png', 'Metas de ahorro', 'Define objetivos y sigue tu progreso.') +
+        featureRow('report.png', 'Panel e informes', 'Gráficos, comparación mes a mes y balance por espacio.') +
+        featureRow('trading.png', 'Avisos por correo', 'Alertas de presupuesto y resumen mensual directo a tu bandeja.') +
+        featureRow('wallet.png', 'Instalable y modo claro/oscuro', 'Úsala como app en tu celular, con el tema que prefieras.') +
         button('Abrir mi panel', `${appUrl}/dashboard`),
     }),
   }
