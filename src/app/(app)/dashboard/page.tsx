@@ -473,47 +473,34 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
+            <div>
               {recentTxs.length === 0 ? (
                 <div className="text-center py-6 text-slate-500 text-xs italic">
                   No hay transacciones registradas.
                 </div>
               ) : (
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-500 text-[9px] uppercase font-bold tracking-wider text-left">
-                      <th className="pb-2.5">Fecha</th>
-                      <th className="pb-2.5">Descripción</th>
-                      <th className="pb-2.5">Categoría</th>
-                      <th className="pb-2.5 text-right">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-xs">
-                    {recentTxs.map((tx) => {
-                      const category = categories.find(c => c.id === tx.category_id)
-                      const isIncome = tx.type === 'income'
-                      return (
-                        <tr key={tx.id} className="hover:bg-slate-850/10">
-                          <td className="py-3 text-slate-400 font-medium whitespace-nowrap">
-                            {new Date(tx.date).toLocaleDateString('es-ES', {
-                              day: '2-digit',
-                              month: 'short'
-                            })}
-                          </td>
-                          <td className="py-3 font-semibold text-slate-200">{tx.description}</td>
-                          <td className="py-3">
-                            <span className="inline-block px-2 py-0.5 bg-slate-950 text-slate-450 rounded-md text-[10px] border border-slate-850">
-                              {category ? category.name : 'Sin Categoría'}
-                            </span>
-                          </td>
-                          <td className={`py-3 text-right font-bold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <div className="divide-y divide-slate-800/70">
+                  {recentTxs.map((tx) => {
+                    const category = categories.find(c => c.id === tx.category_id)
+                    const isIncome = tx.type === 'income'
+                    return (
+                      <div key={tx.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                          {isIncome ? '+' : '−'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {category ? category.name : 'Sin categoría'} · {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           </div>

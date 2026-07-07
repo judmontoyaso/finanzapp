@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { LocalDB } from '@/lib/db'
 import { Category } from '@/types'
 import { toast } from 'react-hot-toast'
-import { FiPlus, FiTrash2, FiTrendingUp, FiTrendingDown, FiX } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiTrendingUp, FiTrendingDown, FiSearch, FiX } from 'react-icons/fi'
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -14,6 +14,7 @@ export default function CategoriesPage() {
   const [newCatName, setNewCatName] = useState('')
   const [newCatType, setNewCatType] = useState<'income' | 'expense'>('expense')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [search, setSearch] = useState('')
 
   const loadData = async () => {
     try {
@@ -32,9 +33,11 @@ export default function CategoriesPage() {
     return () => window.removeEventListener('finanzas_data_changed', loadData)
   }, [])
 
-  // Dividir categorías por tipo
-  const incomeCats = categories.filter((c) => c.type === 'income')
-  const expenseCats = categories.filter((c) => c.type === 'expense')
+  // Dividir categorías por tipo (+ filtro de búsqueda)
+  const q = search.trim().toLowerCase()
+  const match = (c: Category) => !q || c.name.toLowerCase().includes(q)
+  const incomeCats = categories.filter((c) => c.type === 'income' && match(c))
+  const expenseCats = categories.filter((c) => c.type === 'expense' && match(c))
 
   // Manejar adición de categoría
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -94,6 +97,18 @@ export default function CategoriesPage() {
           <FiPlus className="w-4 h-4" />
           Nueva Categoría
         </button>
+      </div>
+
+      {/* BUSCADOR */}
+      <div className="relative max-w-xs">
+        <input
+          type="text"
+          placeholder="Buscar categoría..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-md py-2 px-3 pl-8 text-xs focus:border-emerald-500 outline-none transition-all"
+        />
+        <FiSearch className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
       </div>
 
       {/* GRILLAS PRINCIPALES */}
