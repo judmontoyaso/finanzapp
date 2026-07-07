@@ -21,6 +21,7 @@ import {
   FiArrowDownLeft,
   FiList,
   FiColumns,
+  FiZap,
   FiX
 } from 'react-icons/fi'
 import TransactionsTable from '@/components/TransactionsTable'
@@ -78,6 +79,10 @@ export default function TransactionsPage() {
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
   const [formItems, setFormItems] = useState<TransactionItem[]>([])
   const [scanning, setScanning] = useState(false)
+  // IA: lenguaje natural + sugerencia de categoría
+  const [nlText, setNlText] = useState('')
+  const [nlLoading, setNlLoading] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
   // Fila expandida en la lista (para ver el detalle)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -153,6 +158,7 @@ export default function TransactionsPage() {
     setFormAmount('')
     setFormDate(new Date().toISOString().slice(0, 10))
     setFormItems([])
+    setNlText('')
     setIsAddModalOpen(true)
   }
 
@@ -213,6 +219,59 @@ export default function TransactionsPage() {
     setFormType(t)
     const list = t === 'income' ? incomeCats : expenseCats
     setFormCategory(list[0]?.id || '')
+  }
+
+  const today = () => new Date().toISOString().slice(0, 10)
+
+  // #4 Registro por lenguaje natural
+  const handleInterpret = async () => {
+    const text = nlText.trim()
+    if (!text) return
+    setNlLoading(true)
+    try {
+      const res = await fetch('/api/parse-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, categories: categories.map((c) => ({ name: c.name, type: c.type })), today: today() }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error || 'No se pudo interpretar'); return }
+      setFormType(d.type)
+      setFormDesc(d.description || '')
+      setFormAmount(d.amount != null ? String(d.amount) : '')
+      setFormDate(d.date || today())
+      const list = d.type === 'income' ? incomeCats : expenseCats
+      const m = list.find((c) => c.name.toLowerCase() === String(d.category || '').toLowerCase())
+      setFormCategory(m?.id || list[0]?.id || '')
+      setNlText('')
+      toast.success('Interpretado. Revisa y guarda.')
+    } catch {
+      toast.error('Error de red')
+    } finally {
+      setNlLoading(false)
+    }
+  }
+
+  // #3 Sugerir categoría desde la descripción
+  const handleSuggestCategory = async () => {
+    if (!formDesc.trim()) { toast.error('Escribe una descripción primero'); return }
+    setSuggesting(true)
+    try {
+      const res = await fetch('/api/parse-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: formDesc, categories: formCats.map((c) => ({ name: c.name, type: formType })), today: today() }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error || 'No se pudo sugerir'); return }
+      const m = formCats.find((c) => c.name.toLowerCase() === String(d.category || '').toLowerCase())
+      if (m) { setFormCategory(m.id); toast.success('Categoría sugerida: ' + m.name) }
+      else toast('Sin sugerencia clara')
+    } catch {
+      toast.error('Error de red')
+    } finally {
+      setSuggesting(false)
+    }
   }
 
   const handlePageChange = (page: number) => {
@@ -697,7 +756,31 @@ export default function TransactionsPage() {
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-slate-100 mb-6">Añadir Nueva Transacción</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-4">Añadir Nueva Transacción</h2>
+
+            <div className="mb-4 bg-slate-950 border border-emerald-500/20 rounded-md p-3">
+              <label className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+                <FiZap className="w-3 h-3" /> Escribir con IA
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={nlText}
+                  onChange={(e) => setNlText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInterpret() } }}
+                  placeholder="Ej: gasté 50 mil en mercado ayer"
+                  className="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleInterpret}
+                  disabled={nlLoading || !nlText.trim()}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold disabled:opacity-50 whitespace-nowrap"
+                >
+                  {nlLoading ? '...' : 'Interpretar'}
+                </button>
+              </div>
+            </div>
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
@@ -752,7 +835,12 @@ export default function TransactionsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Categoría</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-400">Categoría</label>
+                    <button type="button" onClick={handleSuggestCategory} disabled={suggesting} className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
+                      <FiZap className="w-3 h-3" /> {suggesting ? '...' : 'Sugerir'}
+                    </button>
+                  </div>
                   <select
                     name="category_id"
                     required
@@ -858,7 +946,12 @@ export default function TransactionsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Categoría</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-400">Categoría</label>
+                    <button type="button" onClick={handleSuggestCategory} disabled={suggesting} className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
+                      <FiZap className="w-3 h-3" /> {suggesting ? '...' : 'Sugerir'}
+                    </button>
+                  </div>
                   <select
                     name="category_id"
                     required
