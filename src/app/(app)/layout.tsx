@@ -15,7 +15,8 @@ import {
   FiPlus,
   FiX,
   FiUsers,
-  FiTrash2
+  FiTrash2,
+  FiSettings
 } from 'react-icons/fi'
 import { WS_TYPES, wsTypeMeta } from '@/lib/workspaceMeta'
 
@@ -357,6 +358,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
+        {/* Configuración */}
+        <Link
+          href="/settings"
+          title={collapsed ? 'Configuración' : undefined}
+          className={`w-full flex items-center gap-3 px-4 py-3 transition-all cursor-pointer border-t border-slate-800 ${collapsed ? 'justify-center' : ''} ${pathname === '/settings' ? 'text-emerald-400 bg-slate-800/50' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'}`}
+        >
+          <FiSettings className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span className="text-[10px] font-semibold">Configuración</span>}
+        </Link>
+
         {/* Theme Toggle */}
         <ThemeToggle collapsed={collapsed} />
 
@@ -483,6 +494,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <p className="text-[10px] text-slate-500 truncate">{user?.email || ''}</p>
                   </div>
                 </div>
+                <Link
+                  href="/settings"
+                  onClick={closeMobile}
+                  className={`w-full flex items-center gap-3 px-4 py-3 transition-all cursor-pointer border-t border-slate-800 ${pathname === '/settings' ? 'text-emerald-400 bg-slate-800/50' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'}`}
+                >
+                  <FiSettings className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-[10px] font-semibold">Configuración</span>
+                </Link>
                 <ThemeToggle />
                 <button
                   onClick={handleSignOut}

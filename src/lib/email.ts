@@ -208,22 +208,63 @@ export function monthlySummaryEmail(opts: {
   }
 }
 
-// Convierte texto plano del modelo (con saltos de línea y viñetas) a HTML simple
+// Convierte Markdown simple del modelo a HTML limpio (encabezados, viñetas,
+// negritas), quita preámbulos y asteriscos sueltos.
 export function textToHtml(text: string): string {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  return text
-    .split(/\n{2,}/)
-    .map((block) => {
-      const lines = block.split('\n').filter((l) => l.trim())
-      const isList = lines.every((l) => /^\s*[-*•]/.test(l))
-      if (isList) {
-        const items = lines.map((l) => `<li style="margin:0 0 4px">${esc(l.replace(/^\s*[-*•]\s?/, ''))}</li>`).join('')
-        return `<ul style="margin:0 0 12px;padding-left:18px;color:${MUTED};font-size:13px;line-height:1.7">${items}</ul>`
+  const inline = (raw: string) =>
+    esc(raw)
+      .replace(/\*\*(.+?)\*\*/g, `<strong style="color:${TEXT}">$1</strong>`)
+      .replace(/\*/g, '') // asteriscos sueltos
+      .trim()
+
+  // Quitar preámbulo tipo "Claro, aquí tienes el reporte..."
+  const clean = text.trim().replace(/^\s*(claro[^\n]*|aqu[ií] tienes[^\n]*|[^\n]*reporte financiero[^\n]*:?)\n+/i, '')
+
+  const lines = clean.split('\n')
+  let html = ''
+  let inList = false
+  const closeList = () => {
+    if (inList) {
+      html += '</ul>'
+      inList = false
+    }
+  }
+  const heading = (t: string) =>
+    `<h3 style="margin:18px 0 8px;font-size:13px;font-weight:800;color:${TEXT};text-transform:uppercase;letter-spacing:.4px">${inline(t)}</h3>`
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) {
+      closeList()
+      continue
+    }
+    // Encabezado: "## X" o "1) Título" / "2. Título"
+    if (/^#{1,3}\s/.test(line)) {
+      closeList()
+      html += heading(line.replace(/^#{1,3}\s*/, ''))
+      continue
+    }
+    if (/^\*{0,2}\s*\d+[\).]\s+\S/.test(line) && line.length < 70) {
+      closeList()
+      html += heading(line.replace(/^\*{0,2}\s*/, ''))
+      continue
+    }
+    // Viñeta
+    if (/^[-*•]\s/.test(line)) {
+      if (!inList) {
+        html += `<ul style="margin:0 0 12px;padding-left:18px;color:${MUTED};font-size:13px;line-height:1.7">`
+        inList = true
       }
-      const html = esc(block).replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, `<strong style="color:${TEXT}">$1</strong>`)
-      return `<p style="margin:0 0 12px;font-size:13px;line-height:1.7;color:${MUTED}">${html}</p>`
-    })
-    .join('')
+      html += `<li style="margin:0 0 5px">${inline(line.replace(/^[-*•]\s*/, ''))}</li>`
+      continue
+    }
+    // Párrafo
+    closeList()
+    html += `<p style="margin:0 0 12px;font-size:13px;line-height:1.7;color:${MUTED}">${inline(line)}</p>`
+  }
+  closeList()
+  return html
 }
 
 export function reportEmail(opts: {

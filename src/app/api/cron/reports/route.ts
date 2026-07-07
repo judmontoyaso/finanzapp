@@ -93,13 +93,15 @@ export async function GET(request: Request) {
     ].join('\n')
 
     const system =
-      'Eres un asesor financiero personal experto. Escribes en español, tono cercano pero profesional. ' +
-      'Das análisis breve, claro y ACCIONABLE que ayude a la persona a mejorar y crecer financieramente. ' +
-      'No inventes datos que no estén; usa solo los provistos. Usa **negritas** para resaltar y viñetas con "-".'
+      'Eres un asesor financiero personal. Escribes en español con tono sobrio, claro y profesional. ' +
+      'REGLAS: no agregues preámbulos ni frases como "Claro, aquí tienes"; empieza directo. ' +
+      'No dramatices ni exageres. Usa SOLO los datos provistos; no inventes causas, deudas, créditos ni motivos que no estén en los datos. ' +
+      'Si no hay ingresos o pocos datos, dilo con naturalidad sin alarmismo. ' +
+      'Formato Markdown limpio: títulos de sección con "## ", viñetas con "- ", y **negrita** solo para 1-2 términos clave por sección. No uses asteriscos sueltos.'
     const user =
-      `Con estos datos financieros del espacio "${ws.name}", escribe un reporte en 4 secciones cortas:\n` +
-      `1) Resumen del periodo. 2) Hallazgos clave. 3) Alertas. 4) 3-4 recomendaciones concretas para crecer/ahorrar.\n` +
-      `Máximo ~220 palabras.\n\nDATOS:\n${dataText}`
+      `Datos del espacio "${ws.name}". Escribe un reporte breve (máx ~180 palabras) con estas secciones:\n` +
+      `## Resumen\n## Hallazgos\n## Recomendaciones (2 a 4, concretas y realistas)\n\n` +
+      `Incluye "## Alertas" solo si los datos lo justifican.\n\nDATOS:\n${dataText}`
 
     let narrative = await generateReport(system, user)
     if (!narrative) {
