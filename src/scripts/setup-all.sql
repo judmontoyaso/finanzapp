@@ -43,8 +43,11 @@ DROP POLICY IF EXISTS "owner writes workspace" ON finanzas.workspaces;
 DROP POLICY IF EXISTS "owner updates workspace" ON finanzas.workspaces;
 DROP POLICY IF EXISTS "owner deletes workspace" ON finanzas.workspaces;
 
+-- Nota: el chequeo directo (user_id = auth.uid()) permite que INSERT ... RETURNING
+-- (supabase-js .insert().select()) vea la fila recién creada por su dueño, sin
+-- depender de la función STABLE que no ve la fila en el mismo statement.
 CREATE POLICY "read shared workspaces" ON finanzas.workspaces
-    FOR SELECT TO authenticated USING (finanzas.has_workspace_access(id));
+    FOR SELECT TO authenticated USING (user_id = auth.uid() OR finanzas.has_workspace_access(id));
 CREATE POLICY "owner writes workspace" ON finanzas.workspaces
     FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "owner updates workspace" ON finanzas.workspaces
