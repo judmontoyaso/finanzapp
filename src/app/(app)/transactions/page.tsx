@@ -22,8 +22,26 @@ import {
   FiList,
   FiColumns,
   FiZap,
+  FiMic,
   FiX
 } from 'react-icons/fi'
+
+// Renderiza la primera página de un PDF a imagen (data URL) para el lector IA
+async function pdfFirstPageToDataURL(file: File): Promise<string> {
+  const pdfjs = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+  const buf = await file.arrayBuffer()
+  const pdf = await pdfjs.getDocument({ data: buf }).promise
+  const page = await pdf.getPage(1)
+  const viewport = page.getViewport({ scale: 2 })
+  const canvas = document.createElement('canvas')
+  canvas.width = viewport.width
+  canvas.height = viewport.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('no ctx')
+  await page.render({ canvas, canvasContext: ctx, viewport }).promise
+  return canvas.toDataURL('image/jpeg', 0.8)
+}
 import TransactionsTable from '@/components/TransactionsTable'
 
 // Reduce y convierte una imagen a data URL JPEG (para no subir fotos pesadas)
@@ -83,6 +101,7 @@ export default function TransactionsPage() {
   const [nlText, setNlText] = useState('')
   const [nlLoading, setNlLoading] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
+  const [listening, setListening] = useState(false)
   // Fila expandida en la lista (para ver el detalle)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -174,13 +193,40 @@ export default function TransactionsPage() {
   const itemsSum = formItems.reduce((s, it) => s + (Number(it.amount) || 0), 0)
 
   // Escanear recibo: sube la foto, prellena el formulario y abre el modal
+  // Dictado por voz (Web Speech API del navegador, gratis)
+  const startDictation = () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const w = window as any
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition
+    if (!SR) {
+      toast.error('Tu navegador no soporta dictado por voz')
+      return
+    }
+    const rec = new SR()
+    rec.lang = 'es-ES'
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    setListening(true)
+    rec.onresult = (ev: any) => {
+      const t = ev.results[0][0].transcript
+      setNlText(t)
+      handleInterpret(t)
+    }
+    rec.onerror = () => { toast.error('No se pudo captar el audio'); setListening(false) }
+    rec.onend = () => setListening(false)
+    rec.start()
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  }
+
   const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
     setScanning(true)
     try {
-      const image = await fileToScaledDataURL(file)
+      const image = file.type === 'application/pdf'
+        ? await pdfFirstPageToDataURL(file)
+        : await fileToScaledDataURL(file)
       const res = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -223,9 +269,9 @@ export default function TransactionsPage() {
 
   const today = () => new Date().toISOString().slice(0, 10)
 
-  // #4 Registro por lenguaje natural
-  const handleInterpret = async () => {
-    const text = nlText.trim()
+  // #4 Registro por lenguaje natural (texto o dictado)
+  const handleInterpret = async (textArg?: string) => {
+    const text = (textArg ?? nlText).trim()
     if (!text) return
     setNlLoading(true)
     try {
@@ -476,7 +522,7 @@ export default function TransactionsPage() {
               <FiCamera className="w-4 h-4" />
             )}
             {scanning ? 'Leyendo...' : 'Escanear'}
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} disabled={scanning} />
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanReceipt} disabled={scanning} />
           </label>
 
           <button
@@ -763,17 +809,26 @@ export default function TransactionsPage() {
                 <FiZap className="w-3 h-3" /> Escribir con IA
               </label>
               <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={startDictation}
+                  disabled={nlLoading}
+                  title="Dictar por voz"
+                  className={`px-2.5 py-2 rounded-md text-xs font-bold border transition-all cursor-pointer disabled:opacity-50 ${listening ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 animate-pulse' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-emerald-400'}`}
+                >
+                  <FiMic className="w-4 h-4" />
+                </button>
                 <input
                   type="text"
                   value={nlText}
                   onChange={(e) => setNlText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInterpret() } }}
-                  placeholder="Ej: gasté 50 mil en mercado ayer"
+                  placeholder={listening ? 'Escuchando...' : 'Ej: gasté 50 mil en mercado ayer'}
                   className="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none"
                 />
                 <button
                   type="button"
-                  onClick={handleInterpret}
+                  onClick={() => handleInterpret()}
                   disabled={nlLoading || !nlText.trim()}
                   className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold disabled:opacity-50 whitespace-nowrap"
                 >
