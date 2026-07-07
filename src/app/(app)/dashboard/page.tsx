@@ -7,10 +7,6 @@ import { Transaction, Category, Budget, RecurringTransaction, Workspace } from '
 import DashboardCharts from '@/components/DashboardCharts'
 import { wsTypeMeta } from '@/lib/workspaceMeta'
 import {
-  FiTrendingUp,
-  FiTrendingDown,
-  FiCreditCard,
-  FiPercent,
   FiPlus,
   FiRepeat,
   FiArrowUpRight,
@@ -261,8 +257,8 @@ export default function DashboardPage() {
                 ${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-md flex items-center justify-center">
-              <FiTrendingUp className="w-4 h-4" />
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
+              <img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" />
             </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total bruto recibido</p>
@@ -277,8 +273,8 @@ export default function DashboardPage() {
                 ${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="w-9 h-9 bg-rose-500/10 text-rose-400 rounded-md flex items-center justify-center">
-              <FiTrendingDown className="w-4 h-4" />
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
+              <img src="/icons/invoice.png" alt="" className="w-7 h-7 object-contain" />
             </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total gastado acumulado</p>
@@ -293,8 +289,8 @@ export default function DashboardPage() {
                 ${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className={`w-9 h-9 rounded-md flex items-center justify-center ${netBalance >= 0 ? 'bg-teal-500/10 text-teal-400' : 'bg-amber-500/10 text-amber-400'}`}>
-              <FiCreditCard className="w-4 h-4" />
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
+              <img src="/icons/wallet.png" alt="" className="w-7 h-7 object-contain" />
             </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-3 font-semibold">Diferencia neta</p>
@@ -309,8 +305,8 @@ export default function DashboardPage() {
                 {savingsRate >= 0 ? `${savingsRate.toFixed(1)}%` : '0.0%'}
               </p>
             </div>
-            <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-md flex items-center justify-center">
-              <FiPercent className="w-4 h-4" />
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
+              <img src="/icons/forecast.png" alt="" className="w-7 h-7 object-contain" />
             </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-3 font-semibold">Proporción de ahorro</p>
