@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arca-pwa-cache-v4';
+const CACHE_NAME = 'arca-pwa-cache-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/icon-192.png',
