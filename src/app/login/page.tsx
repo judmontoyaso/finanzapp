@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { FaGoogle, FaWallet } from 'react-icons/fa'
+import { FaGoogle } from 'react-icons/fa'
+import LogoMark from '@/components/LogoMark'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -34,11 +35,9 @@ export default function LoginPage() {
         
         {/* Logo Minimalista */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 bg-emerald-600 text-white rounded-md flex items-center justify-center">
-            <FaWallet className="w-5 h-5" />
-          </div>
+          <LogoMark className="w-9 h-9" />
           <span className="text-xl font-bold tracking-tight text-slate-100">
-            Finanzas<span className="text-emerald-500">Personales</span>
+            Arca<span className="text-emerald-500">Finanzas</span>
           </span>
         </div>
 

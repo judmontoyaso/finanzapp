@@ -9,7 +9,7 @@ import {
   FiCheckSquare, 
   FiSmartphone 
 } from 'react-icons/fi'
-import { FaWallet } from 'react-icons/fa'
+import LogoMark from '@/components/LogoMark'
 
 export default function LandingPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -31,11 +31,9 @@ export default function LandingPage() {
       {/* Header */}
       <header className="max-w-7xl mx-auto w-full px-6 py-5 flex justify-between items-center border-b border-slate-900">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-emerald-600 text-white rounded-md flex items-center justify-center">
-            <FaWallet className="w-4 h-4" />
-          </div>
+          <LogoMark className="w-8 h-8" />
           <span className="text-md font-bold tracking-tight text-slate-100">
-            Finanzas<span className="text-emerald-500">Personales</span>
+            Arca<span className="text-emerald-500">Finanzas</span>
           </span>
         </div>
         
@@ -64,7 +62,7 @@ export default function LandingPage() {
       <main className="max-w-4xl mx-auto px-6 pt-16 pb-20 flex flex-col items-center text-center">
         {/* Badge */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-800 text-slate-400 rounded-md text-[10px] font-bold mb-6 uppercase tracking-wider">
-          Versión 2.0 PWA Conectada a Supabase
+          Espacios · Presupuestos · Metas · Recurrentes
         </div>
 
         {/* Headline */}
@@ -161,7 +159,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 py-6 text-center text-[10px] text-slate-500 w-full">
-        © 2026 Finanzas Personales PWA. Todos los derechos reservados.
+        © 2026 Arca Finanzas. Todos los derechos reservados.
       </footer>
     </div>
   )

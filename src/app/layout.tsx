@@ -11,13 +11,13 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Finanzas Personales PWA - Control de Gastos Inteligente",
-  description: "Toma el control absoluto de tus finanzas diarias. Establece presupuestos por categorías, visualiza gastos e ingresos con gráficos interactivos y ahorra con facilidad.",
+  title: "Arca Finanzas - Control de Gastos Inteligente",
+  description: "Toma el control absoluto de tus finanzas: espacios de trabajo, presupuestos con alertas, transacciones recurrentes, metas de ahorro y avisos por correo.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Finanzas PWA",
+    title: "Arca Finanzas",
   },
   icons: {
     icon: "/logo.svg",

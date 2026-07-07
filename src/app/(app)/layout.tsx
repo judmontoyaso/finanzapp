@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { LocalDB, User, WorkspaceType } from '@/lib/db'
 import { Workspace, WorkspaceMember } from '@/types'
 import { toast } from 'react-hot-toast'
-import { FaWallet } from 'react-icons/fa'
+import LogoMark from '@/components/LogoMark'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
   FiMenu,
@@ -234,7 +234,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-950 px-6">
         <div className="bg-slate-900 border border-slate-800 rounded-md p-8 max-w-md w-full text-center space-y-4">
-          <FaWallet className="w-8 h-8 text-emerald-500 mx-auto" />
+          <LogoMark className="w-10 h-10 mx-auto" />
           <h2 className="text-lg font-bold text-slate-100">Error de Conexion</h2>
           <p className="text-xs text-slate-400 leading-relaxed">
             No se pudo conectar con la base de datos. Verifica tu configuracion de Supabase y que las variables de entorno esten correctas.
@@ -256,9 +256,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <FaWallet className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+          <LogoMark className="w-6 h-6 flex-shrink-0" />
           {!collapsed && (
-            <span className="text-sm font-bold text-slate-100 whitespace-nowrap">FinanzasPersonales</span>
+            <span className="text-sm font-bold text-slate-100 whitespace-nowrap">Arca Finanzas</span>
           )}
         </div>
         <button
@@ -382,8 +382,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 h-14 flex items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
-          <FaWallet className="w-5 h-5 text-emerald-500" />
-          <span className="text-sm font-bold text-slate-100">FinanzasPersonales</span>
+          <LogoMark className="w-6 h-6" />
+          <span className="text-sm font-bold text-slate-100">Arca Finanzas</span>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
@@ -415,8 +415,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex flex-col h-[calc(100%-52px)]">
               {/* Logo */}
               <div className="flex items-center gap-2.5 px-4 py-4 border-b border-slate-800">
-                <FaWallet className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                <span className="text-sm font-bold text-slate-100 whitespace-nowrap">FinanzasPersonales</span>
+                <LogoMark className="w-6 h-6 flex-shrink-0" />
+                <span className="text-sm font-bold text-slate-100 whitespace-nowrap">Arca Finanzas</span>
               </div>
 
               {/* Workspace Selector */}

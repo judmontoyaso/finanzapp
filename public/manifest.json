@@ -1,7 +1,7 @@
 {
-  "name": "Finanzas Personales PWA",
-  "short_name": "Finanzas",
-  "description": "Toma el control absoluto de tus finanzas diarias, ingresos, gastos y presupuestos.",
+  "name": "Arca Finanzas",
+  "short_name": "Arca",
+  "description": "Controla tus finanzas: espacios, presupuestos con alertas, recurrentes y metas de ahorro.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",
