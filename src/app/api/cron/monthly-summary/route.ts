@@ -29,12 +29,22 @@ export async function GET(request: Request) {
   const start = `${monthKey}-01`
   const endDate = new Date(y, m + 1, 1).toISOString().split('T')[0] // primer día del mes actual
 
-  const [{ data: workspaces }, { data: categories }, { data: txs }, { data: members }] = await Promise.all([
+  const [wsR, catR, txR, memR] = await Promise.all([
     admin.from('workspaces').select('id, name, user_id'),
     admin.from('categories').select('id, name'),
     admin.from('transactions').select('workspace_id, category_id, amount, type').gte('date', start).lt('date', endDate),
     admin.from('workspace_members').select('workspace_id, invited_email'),
   ])
+
+  const dbErr = wsR.error || catR.error || txR.error || memR.error
+  if (dbErr) {
+    return NextResponse.json({ error: 'DB: ' + dbErr.message }, { status: 500 })
+  }
+
+  const workspaces = wsR.data
+  const categories = catR.data
+  const txs = txR.data
+  const members = memR.data
 
   const catName = new Map((categories || []).map((c) => [c.id, c.name]))
   const ownerCache = new Map<string, string | null>()

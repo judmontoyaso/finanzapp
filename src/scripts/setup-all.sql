@@ -119,3 +119,11 @@ CREATE POLICY "members access recurring_transactions" ON finanzas.recurring_tran
     WITH CHECK (finanzas.has_workspace_access(workspace_id));
 
 GRANT ALL ON finanzas.recurring_transactions TO anon, authenticated;
+
+-- ---------- 4. PERMISOS service_role (para los crons) ----------
+GRANT USAGE ON SCHEMA finanzas TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA finanzas TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA finanzas TO service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA finanzas TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA finanzas GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA finanzas GRANT ALL ON SEQUENCES TO service_role;

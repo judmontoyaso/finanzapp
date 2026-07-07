@@ -20,14 +20,24 @@ export async function GET(request: Request) {
   const url = appUrl(request)
   const monthKey = new Date().toISOString().substring(0, 7) // YYYY-MM
 
-  const [{ data: workspaces }, { data: budgets }, { data: categories }, { data: txs }, { data: members }] =
-    await Promise.all([
-      admin.from('workspaces').select('id, name, user_id'),
-      admin.from('budgets').select('workspace_id, category_id, amount'),
-      admin.from('categories').select('id, name'),
-      admin.from('transactions').select('workspace_id, category_id, amount, type').gte('date', `${monthKey}-01`),
-      admin.from('workspace_members').select('workspace_id, invited_email'),
-    ])
+  const [wsR, budR, catR, txR, memR] = await Promise.all([
+    admin.from('workspaces').select('id, name, user_id'),
+    admin.from('budgets').select('workspace_id, category_id, amount'),
+    admin.from('categories').select('id, name'),
+    admin.from('transactions').select('workspace_id, category_id, amount, type').gte('date', `${monthKey}-01`),
+    admin.from('workspace_members').select('workspace_id, invited_email'),
+  ])
+
+  const dbErr = wsR.error || budR.error || catR.error || txR.error || memR.error
+  if (dbErr) {
+    return NextResponse.json({ error: 'DB: ' + dbErr.message }, { status: 500 })
+  }
+
+  const workspaces = wsR.data
+  const budgets = budR.data
+  const categories = catR.data
+  const txs = txR.data
+  const members = memR.data
 
   const catName = new Map((categories || []).map((c) => [c.id, c.name]))
   const ownerCache = new Map<string, string | null>()
