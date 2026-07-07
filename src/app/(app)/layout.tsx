@@ -21,11 +21,9 @@ import {
   FiPlus,
   FiX,
   FiUsers,
-  FiTrash2,
-  FiUser,
-  FiHome
+  FiTrash2
 } from 'react-icons/fi'
-import type { IconType } from 'react-icons'
+import { WS_TYPES, wsTypeMeta } from '@/lib/workspaceMeta'
 
 const NAV_ITEMS = [
   { label: 'Panel Principal', href: '/dashboard', icon: FiGrid },
@@ -35,15 +33,6 @@ const NAV_ITEMS = [
   { label: 'Metas de Ahorro', href: '/savings', icon: FiTrendingUp },
   { label: 'Categorías', href: '/categories', icon: FiTag },
 ]
-
-const WS_TYPES: { value: WorkspaceType; label: string; Icon: IconType; hint: string }[] = [
-  { value: 'personal', label: 'Personal', Icon: FiUser, hint: 'Privado, no se puede compartir' },
-  { value: 'home', label: 'Hogar', Icon: FiHome, hint: 'Gastos del hogar en familia' },
-  { value: 'business', label: 'Negocio', Icon: FiBriefcase, hint: 'Ventas, nómina, proveedores' },
-  { value: 'other', label: 'Otro', Icon: FiFolder, hint: 'Categorías mínimas' },
-]
-
-const wsTypeMeta = (t?: string) => WS_TYPES.find((x) => x.value === t) || WS_TYPES[3]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()

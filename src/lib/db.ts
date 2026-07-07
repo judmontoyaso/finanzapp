@@ -156,6 +156,33 @@ export const LocalDB = {
     return workspaces as Workspace[]
   },
 
+  // Resumen del mes actual por cada espacio accesible (para el panel general)
+  async getWorkspacesOverview(): Promise<(Workspace & { isOwner: boolean; income: number; expense: number; net: number })[]> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const wss = await this.getWorkspaces()
+    const monthStart = new Date().toISOString().substring(0, 7) + '-01'
+
+    const { data: txs } = await supabase
+      .from('transactions')
+      .select('workspace_id, type, amount')
+      .gte('date', monthStart)
+
+    const agg = new Map<string, { income: number; expense: number }>()
+    ;(txs || []).forEach((t) => {
+      const cur = agg.get(t.workspace_id) || { income: 0, expense: 0 }
+      if (t.type === 'income') cur.income += Number(t.amount)
+      else cur.expense += Number(t.amount)
+      agg.set(t.workspace_id, cur)
+    })
+
+    return wss.map((w) => {
+      const a = agg.get(w.id) || { income: 0, expense: 0 }
+      return { ...w, isOwner: w.user_id === user.id, income: a.income, expense: a.expense, net: a.income - a.expense }
+    })
+  },
+
   async addWorkspace(name: string, wsType: WorkspaceType = 'other'): Promise<Workspace> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')

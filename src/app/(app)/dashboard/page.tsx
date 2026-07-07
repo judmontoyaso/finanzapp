@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { LocalDB } from '@/lib/db'
-import { Transaction, Category, Budget, RecurringTransaction } from '@/types'
+import { Transaction, Category, Budget, RecurringTransaction, Workspace } from '@/types'
 import DashboardCharts from '@/components/DashboardCharts'
+import { wsTypeMeta } from '@/lib/workspaceMeta'
 import {
   FiTrendingUp,
   FiTrendingDown,
@@ -22,9 +23,12 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [dueRecurring, setDueRecurring] = useState<RecurringTransaction[]>([])
+  const [overview, setOverview] = useState<(Workspace & { isOwner: boolean; income: number; expense: number; net: number })[]>([])
+  const [activeWsId, setActiveWsId] = useState('')
   const [loading, setLoading] = useState(true)
 
   const loadDashboardData = async () => {
+    setActiveWsId(LocalDB.getActiveWorkspaceId())
     try {
       const txs = await LocalDB.getTransactions()
       const cats = await LocalDB.getCategories()
@@ -37,12 +41,23 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
+    // Panel de espacios de trabajo
+    try {
+      setOverview(await LocalDB.getWorkspacesOverview())
+    } catch {
+      setOverview([])
+    }
     // Recurrentes pendientes (tabla opcional: no romper si aún no existe)
     try {
       setDueRecurring(await LocalDB.getDueRecurring())
     } catch {
       setDueRecurring([])
     }
+  }
+
+  const switchWorkspace = (id: string) => {
+    if (id === activeWsId) return
+    LocalDB.setActiveWorkspaceId(id) // dispara recarga vía evento
   }
 
   useEffect(() => {
@@ -158,6 +173,48 @@ export default function DashboardPage() {
           Nueva Transacción
         </Link>
       </div>
+
+      {/* MIS ESPACIOS DE TRABAJO */}
+      {overview.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-3">Mis Espacios de Trabajo</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {overview.map((w) => {
+              const meta = wsTypeMeta(w.type)
+              const Icon = meta.Icon
+              const isActive = w.id === activeWsId
+              return (
+                <button
+                  key={w.id}
+                  onClick={() => switchWorkspace(w.id)}
+                  className={`text-left bg-slate-900 border rounded-md p-4 transition-all cursor-pointer ${
+                    isActive ? 'border-emerald-500' : 'border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <span className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-100 truncate leading-tight">{w.name}</p>
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                        {meta.label} · {w.isOwner ? 'Dueño' : 'Compartido'}
+                      </p>
+                    </div>
+                    {isActive && <span className="ml-auto text-[9px] font-bold text-emerald-400 uppercase">Activo</span>}
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <span className="text-[10px] text-slate-500 font-semibold">Balance del mes</span>
+                    <span className={`text-sm font-extrabold ${w.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      ${w.net.toLocaleString('es-ES')}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* BANNER: recurrentes pendientes por confirmar */}
       {dueRecurring.length > 0 && (
