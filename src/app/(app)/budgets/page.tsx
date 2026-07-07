@@ -17,6 +17,9 @@ export default function BudgetsPage() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [budgetAmount, setBudgetAmount] = useState('')
 
+  // Vista: mostrar solo categorías con presupuesto
+  const [showOnlyBudgeted, setShowOnlyBudgeted] = useState(false)
+
   const loadData = async () => {
     try {
       const cats = await LocalDB.getCategories()
@@ -73,6 +76,18 @@ export default function BudgetsPage() {
     .reduce((sum, b) => sum + b.spent, 0)
 
   const globalPercent = totalBudgeted > 0 ? (totalSpentInBudgets / totalBudgeted) * 100 : 0
+
+  const budgetedCount = budgetsList.filter((b) => b.budgetAmount > 0).length
+
+  // Lista a mostrar: filtrada + ordenada (excedidos primero, luego cerca, luego resto)
+  const displayList = budgetsList
+    .filter((b) => !showOnlyBudgeted || b.budgetAmount > 0)
+    .sort((a, b) => {
+      const aHas = a.budgetAmount > 0
+      const bHas = b.budgetAmount > 0
+      if (aHas !== bHas) return aHas ? -1 : 1
+      return b.percent - a.percent
+    })
 
   // Abrir modal de edición
   const handleOpenConfig = (cat: Category, currentAmount: number) => {
@@ -175,9 +190,31 @@ export default function BudgetsPage() {
         )}
       </div>
 
+      {/* BARRA: conteo + filtro */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-400 font-semibold">
+          <span className="text-slate-100 font-bold">{budgetedCount}</span> de {budgetsList.length} categorías con presupuesto
+        </p>
+        <button
+          onClick={() => setShowOnlyBudgeted((v) => !v)}
+          className={`px-3 py-1.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
+            showOnlyBudgeted
+              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+              : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-100'
+          }`}
+        >
+          {showOnlyBudgeted ? 'Mostrando solo con presupuesto' : 'Solo con presupuesto'}
+        </button>
+      </div>
+
       {/* GRILLA DE PRESUPUESTOS POR CATEGORÍA */}
+      {displayList.length === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-10 text-center text-slate-500 text-xs">
+          {showOnlyBudgeted ? 'No has asignado presupuestos todavía.' : 'No hay categorías de gasto.'}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {budgetsList.map((item) => {
+        {displayList.map((item) => {
           const hasBudget = item.budgetAmount > 0
           const percent = Math.min(item.percent, 100)
           const isOverBudget = item.spent > item.budgetAmount
@@ -269,6 +306,7 @@ export default function BudgetsPage() {
           )
         })}
       </div>
+      )}
 
       {/* MODAL CONFIGURACIÓN DE PRESUPUESTO */}
       {isModalOpen && selectedCategory && (
