@@ -16,6 +16,8 @@ import {
   FiChevronDown,
   FiFilter,
   FiCamera,
+  FiArrowUpRight,
+  FiArrowDownLeft,
   FiX
 } from 'react-icons/fi'
 
@@ -441,83 +443,69 @@ export default function TransactionsPage() {
       </div>
 
       {/* LISTADO DE TRANSACCIONES */}
-      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
-        <div className="overflow-x-auto">
-          {paginatedTransactions.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <p className="text-xs font-semibold">No se encontraron movimientos.</p>
-              <button
-                onClick={handleResetFilters}
-                className="mt-3 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-md text-[10px] font-bold text-emerald-500 hover:bg-slate-900 transition-all cursor-pointer"
-              >
-                Limpiar Filtros
-              </button>
-            </div>
-          ) : (
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase font-bold tracking-wider text-left">
-                  <th className="pb-3 pr-3">Fecha</th>
-                  <th className="pb-3 pr-3">Descripción</th>
-                  <th className="pb-3 pr-3">Categoría</th>
-                  <th className="pb-3 pr-3">Tipo</th>
-                  <th className="pb-3 text-right pr-4">Monto</th>
-                  <th className="pb-3 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs">
-                {paginatedTransactions.map((tx) => {
-                  const category = categories.find((c) => c.id === tx.category_id)
-                  const isIncome = tx.type === 'income'
-                  return (
-                    <tr key={tx.id} className="hover:bg-slate-850/10">
-                      <td className="py-3 text-slate-400 font-semibold whitespace-nowrap">
-                        {new Date(tx.date).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </td>
-                      <td className="py-3 font-bold text-slate-200">{tx.description}</td>
-                      <td className="py-3">
-                        <span className="inline-block px-2.5 py-0.5 bg-slate-950 text-slate-400 rounded-md text-[10px] border border-slate-850">
-                          {category ? category.name : 'Sin Categoría'}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          isIncome ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' : 'bg-rose-500/10 text-rose-400 border border-rose-500/10'
-                        }`}>
-                          <span className={`w-1 h-1 rounded-full ${isIncome ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
-                          {isIncome ? 'Ingreso' : 'Gasto'}
-                        </span>
-                      </td>
-                      <td className={`py-3 text-right font-bold pr-4 whitespace-nowrap text-sm ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 text-center whitespace-nowrap">
-                        <div className="flex justify-center items-center gap-1.5">
-                          <button
-                            onClick={() => handleEditOpen(tx)}
-                            className="p-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-800 text-slate-450 hover:text-slate-100 rounded-md transition-all cursor-pointer"
-                          >
-                            <FiEdit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(tx.id)}
-                            className="p-1.5 bg-slate-950 border border-slate-850 hover:bg-red-950/40 text-slate-450 hover:text-red-400 rounded-md transition-all cursor-pointer"
-                          >
-                            <FiTrash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
+        {paginatedTransactions.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            <p className="text-xs font-semibold">No se encontraron movimientos.</p>
+            <button
+              onClick={handleResetFilters}
+              className="mt-3 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-md text-[10px] font-bold text-emerald-500 hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              Limpiar Filtros
+            </button>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-800/70">
+            {paginatedTransactions.map((tx) => {
+              const category = categories.find((c) => c.id === tx.category_id)
+              const isIncome = tx.type === 'income'
+              const Arrow = isIncome ? FiArrowUpRight : FiArrowDownLeft
+              return (
+                <div key={tx.id} className="group flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  {/* Icono por tipo */}
+                  <span className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                    <Arrow className="w-4 h-4" />
+                  </span>
+
+                  {/* Descripción + categoría/fecha */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
+                      <span className="truncate">{category ? category.name : 'Sin categoría'}</span>
+                      <span className="text-slate-700">•</span>
+                      <span className="whitespace-nowrap">
+                        {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Monto */}
+                  <span className={`text-sm font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                  </span>
+
+                  {/* Acciones (aparecen al pasar el mouse en desktop; siempre en móvil) */}
+                  <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEditOpen(tx)}
+                      title="Editar"
+                      className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                    >
+                      <FiEdit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(tx.id)}
+                      title="Eliminar"
+                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Paginación */}
         {totalPages > 1 && (
