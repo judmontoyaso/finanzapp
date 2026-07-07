@@ -89,6 +89,38 @@ export function welcomeEmail(name: string, appUrl: string): EmailContent {
   }
 }
 
+function featureRow(title: string, desc: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;"><tr>
+    <td style="width:8px;vertical-align:top;padding-top:6px;"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:${ACCENT};"></span></td>
+    <td style="padding-left:10px;font-family:Arial,Helvetica,sans-serif;">
+      <div style="font-size:13px;font-weight:700;color:${TEXT};">${title}</div>
+      <div style="font-size:12px;line-height:1.6;color:${MUTED};">${desc}</div>
+    </td>
+  </tr></table>`
+}
+
+export function featuresAnnouncementEmail(name: string, appUrl: string): EmailContent {
+  return {
+    subject: `Conoce todo lo que puedes hacer en ${BRAND}`,
+    html: baseLayout({
+      preheader: 'Espacios, recurrentes, presupuestos, metas y avisos por correo.',
+      heading: `Hola ${name}, esto es lo que puedes hacer`,
+      body:
+        paragraph('Reunimos en un solo lugar todo para controlar tu dinero. Un repaso rápido:') +
+        featureRow('Espacios de trabajo', 'Separa tus finanzas: personal, hogar o negocio, cada uno con sus categorías.') +
+        featureRow('Compartir en equipo', 'Invita personas por correo a un espacio (no al personal) para gestionarlo juntos.') +
+        featureRow('Transacciones y categorías', 'Registra ingresos y gastos y organízalos por categoría.') +
+        featureRow('Recurrentes con confirmación', 'Salario, arriendo o suscripciones: te avisamos y confirmas antes de registrar.') +
+        featureRow('Presupuestos con alertas', 'Fija límites por categoría y recibe aviso al acercarte o pasarte.') +
+        featureRow('Metas de ahorro', 'Define objetivos y sigue tu progreso.') +
+        featureRow('Panel e informes', 'Gráficos, comparación mes a mes y balance por espacio.') +
+        featureRow('Avisos por correo', 'Alertas de presupuesto y resumen mensual directo a tu bandeja.') +
+        featureRow('Instalable y modo claro/oscuro', 'Úsala como app en tu celular, con el tema que prefieras.') +
+        button('Abrir mi panel', `${appUrl}/dashboard`),
+    }),
+  }
+}
+
 export function invitationEmail(opts: {
   inviter: string
   workspaceName: string
