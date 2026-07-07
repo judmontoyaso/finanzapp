@@ -12,8 +12,41 @@ import {
   FiArrowUpRight,
   FiArrowDownRight,
   FiAlertTriangle,
-  FiChevronDown
+  FiChevronDown,
+  FiMove,
+  FiCheck
 } from 'react-icons/fi'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+const DEFAULT_ORDER = ['metrics', 'summary', 'charts', 'budgets', 'activity']
+
+function SortableWidget({ id, editing, children }: { id: string; editing: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  }
+  return (
+    <div ref={setNodeRef} style={style} className={`relative ${editing ? 'rounded-md outline-dashed outline-1 outline-emerald-500/40' : ''}`}>
+      {editing && (
+        <button
+          {...attributes}
+          {...listeners}
+          type="button"
+          title="Arrastrar para reordenar"
+          className="absolute top-2 right-2 z-20 p-1.5 bg-emerald-600 text-white rounded-md cursor-grab active:cursor-grabbing shadow touch-none"
+        >
+          <FiMove className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {children}
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -55,6 +88,32 @@ export default function DashboardPage() {
   const switchWorkspace = (id: string) => {
     if (id === activeWsId) return
     LocalDB.setActiveWorkspaceId(id) // dispara recarga vía evento
+  }
+
+  // --- Layout arrastrable del dashboard ---
+  const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
+  const [editingLayout, setEditingLayout] = useState(false)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('dash_order') || '[]')
+      if (Array.isArray(saved) && saved.length) {
+        const merged = [...saved.filter((x: string) => DEFAULT_ORDER.includes(x)), ...DEFAULT_ORDER.filter((x) => !saved.includes(x))]
+        setOrder(merged)
+      }
+    } catch {}
+  }, [])
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (over && active.id !== over.id) {
+      setOrder((prev) => {
+        const next = arrayMove(prev, prev.indexOf(active.id as string), prev.indexOf(over.id as string))
+        try { localStorage.setItem('dash_order', JSON.stringify(next)) } catch {}
+        return next
+      })
+    }
   }
 
 
@@ -155,6 +214,147 @@ export default function DashboardPage() {
     )
   }
 
+  const widgetNodes: Record<string, React.ReactNode> = {
+    metrics: (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ingresos del Mes</span>
+              <p className="text-xl font-extrabold text-emerald-400 mt-1.5">${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" /></div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total bruto recibido</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gastos del Mes</span>
+              <p className="text-xl font-extrabold text-rose-400 mt-1.5">${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/invoice.png" alt="" className="w-7 h-7 object-contain" /></div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total gastado acumulado</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Balance de Caja</span>
+              <p className={`text-xl font-extrabold mt-1.5 ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/wallet.png" alt="" className="w-7 h-7 object-contain" /></div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Diferencia neta</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tasa de Ahorro</span>
+              <p className="text-xl font-extrabold text-blue-400 mt-1.5">{savingsRate >= 0 ? `${savingsRate.toFixed(1)}%` : '0.0%'}</p>
+            </div>
+            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/forecast.png" alt="" className="w-7 h-7 object-contain" /></div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Proporción de ahorro</p>
+        </div>
+      </div>
+    ),
+    summary: (
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-4">Resumen del Mes</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ingresos</span>
+            <p className="text-lg font-extrabold text-slate-100">${totalIncome.toLocaleString('es-ES')}</p>
+            <DeltaBadge delta={incomeDelta} />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Gastos</span>
+            <p className="text-lg font-extrabold text-slate-100">${totalExpense.toLocaleString('es-ES')}</p>
+            <DeltaBadge delta={expenseDelta} invert />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Mayor gasto</span>
+            {topCat ? (
+              <>
+                <p className="text-lg font-extrabold text-slate-100 truncate">{topCat.name}</p>
+                <span className="text-[10px] font-bold text-rose-400">${topCat.amount.toLocaleString('es-ES')}</span>
+              </>
+            ) : (
+              <p className="text-xs text-slate-500 italic mt-1">Sin gastos este mes</p>
+            )}
+          </div>
+        </div>
+      </div>
+    ),
+    charts: <DashboardCharts transactions={transactions} categories={categories} />,
+    budgets: (
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Metas de Presupuesto</h3>
+          <Link href="/budgets" className="text-[10px] font-semibold text-emerald-450 hover:underline">Gestionar</Link>
+        </div>
+        <div className="space-y-3.5">
+          {budgetOverviews.length === 0 ? (
+            <div className="text-center py-6 text-slate-500 text-xs">
+              <p className="italic">No has fijado presupuestos todavía.</p>
+              <Link href="/budgets" className="inline-block mt-3 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-md font-bold hover:bg-slate-800 text-emerald-500 text-[10px]">Establecer Presupuesto</Link>
+            </div>
+          ) : (
+            budgetOverviews.slice(0, 6).map((b) => {
+              const percent = Math.min(b.percent, 100)
+              const isOverBudget = b.spent > b.amount
+              const isClose = b.percent >= 80 && !isOverBudget
+              let barColor = 'bg-emerald-500'
+              let textColor = 'text-emerald-400'
+              if (isOverBudget) { barColor = 'bg-red-500'; textColor = 'text-red-400 font-bold' }
+              else if (isClose) { barColor = 'bg-amber-500'; textColor = 'text-amber-400' }
+              return (
+                <div key={b.id} className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold text-slate-300">
+                    <span>{b.categoryName}</span>
+                    <span className={textColor}>${b.spent.toLocaleString()} / <span className="text-slate-500">${b.amount.toLocaleString()}</span></span>
+                  </div>
+                  <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                    <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${percent}%` }}></div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+    ),
+    activity: (
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Actividad Reciente</h3>
+          <Link href="/transactions" className="text-[10px] font-semibold text-emerald-450 hover:underline">Ver Todas</Link>
+        </div>
+        {recentTxs.length === 0 ? (
+          <div className="text-center py-6 text-slate-500 text-xs italic">No hay transacciones registradas.</div>
+        ) : (
+          <div className="divide-y divide-slate-800/70">
+            {recentTxs.map((tx) => {
+              const category = categories.find((c) => c.id === tx.category_id)
+              const isIncome = tx.type === 'income'
+              return (
+                <div key={tx.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>{isIncome ? '+' : '−'}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{category ? category.name : 'Sin categoría'} · {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</p>
+                  </div>
+                  <span className={`text-xs font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>{isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    ),
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Título de la página */}
@@ -166,13 +366,21 @@ export default function DashboardPage() {
           </h1>
           <p className="text-slate-400 text-xs mt-1">Resumen general y estadísticas de tus movimientos del mes.</p>
         </div>
-        <Link
-          href="/transactions"
-          className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md font-bold text-xs transition-all duration-150 active:scale-[0.99]"
-        >
-          <FiPlus className="w-4 h-4" />
-          Nueva Transacción
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setEditingLayout((v) => !v)}
+            className={`inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-md font-bold text-xs border transition-all cursor-pointer ${editingLayout ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'}`}
+          >
+            {editingLayout ? <><FiCheck className="w-4 h-4" /> Listo</> : <><FiMove className="w-4 h-4" /> Editar diseño</>}
+          </button>
+          <Link
+            href="/transactions"
+            className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md font-bold text-xs transition-all duration-150 active:scale-[0.99]"
+          >
+            <FiPlus className="w-4 h-4" />
+            Nueva Transacción
+          </Link>
+        </div>
       </div>
 
       {/* MIS ESPACIOS DE TRABAJO (desplegable) */}
@@ -256,206 +464,24 @@ export default function DashboardPage() {
         </Link>
       )}
 
-      {/* TARJETAS DE MÉTRICAS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card Ingresos */}
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ingresos del Mes</span>
-              <p className="text-xl font-extrabold text-emerald-400 mt-1.5">
-                ${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
-              <img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total bruto recibido</p>
-        </div>
+      {editingLayout && (
+        <p className="text-[10px] text-emerald-400 font-semibold">Arrastra las tarjetas por el asa para reordenar. Se guarda automáticamente.</p>
+      )}
 
-        {/* Card Gastos */}
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gastos del Mes</span>
-              <p className="text-xl font-extrabold text-rose-400 mt-1.5">
-                ${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
-              <img src="/icons/invoice.png" alt="" className="w-7 h-7 object-contain" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total gastado acumulado</p>
-        </div>
-
-        {/* Card Balance */}
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Balance de Caja</span>
-              <p className={`text-xl font-extrabold mt-1.5 ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>
-                ${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
-              <img src="/icons/wallet.png" alt="" className="w-7 h-7 object-contain" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Diferencia neta</p>
-        </div>
-
-        {/* Card Tasa de Ahorro */}
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tasa de Ahorro</span>
-              <p className="text-xl font-extrabold text-blue-400 mt-1.5">
-                {savingsRate >= 0 ? `${savingsRate.toFixed(1)}%` : '0.0%'}
-              </p>
-            </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0">
-              <img src="/icons/forecast.png" alt="" className="w-7 h-7 object-contain" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Proporción de ahorro</p>
-        </div>
-      </div>
-
-      {/* RESUMEN DEL MES (comparación mes a mes) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-4">Resumen del Mes</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ingresos</span>
-            <p className="text-lg font-extrabold text-slate-100">${totalIncome.toLocaleString('es-ES')}</p>
-            <DeltaBadge delta={incomeDelta} />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Gastos</span>
-            <p className="text-lg font-extrabold text-slate-100">${totalExpense.toLocaleString('es-ES')}</p>
-            <DeltaBadge delta={expenseDelta} invert />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Mayor gasto</span>
-            {topCat ? (
-              <>
-                <p className="text-lg font-extrabold text-slate-100 truncate">{topCat.name}</p>
-                <span className="text-[10px] font-bold text-rose-400">${topCat.amount.toLocaleString('es-ES')}</span>
-              </>
-            ) : (
-              <p className="text-xs text-slate-500 italic mt-1">Sin gastos este mes</p>
+      {/* WIDGETS ARRASTRABLES */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={order} strategy={verticalListSortingStrategy}>
+          <div className="space-y-6">
+            {order.map((id) =>
+              widgetNodes[id] ? (
+                <SortableWidget key={id} id={id} editing={editingLayout}>
+                  {widgetNodes[id]}
+                </SortableWidget>
+              ) : null
             )}
           </div>
-        </div>
-      </div>
-
-      {/* GRÁFICOS INTERACTIVOS */}
-      <DashboardCharts transactions={transactions} categories={categories} />
-
-      {/* COLUMNAS: PRESUPUESTOS Y ÚLTIMAS TRANSACCIONES */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Presupuestos */}
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md lg:col-span-1 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Metas de Presupuesto</h3>
-              <Link href="/budgets" className="text-[10px] font-semibold text-emerald-450 hover:underline">
-                Gestionar
-              </Link>
-            </div>
-
-            <div className="space-y-3.5">
-              {budgetOverviews.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs">
-                  <p className="italic">No has fijado presupuestos todavía.</p>
-                  <Link href="/budgets" className="inline-block mt-3 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-md font-bold hover:bg-slate-900 text-emerald-500 text-[10px]">
-                    Establecer Presupuesto
-                  </Link>
-                </div>
-              ) : (
-                budgetOverviews.slice(0, 4).map((b) => {
-                  const percent = Math.min(b.percent, 100)
-                  const isOverBudget = b.spent > b.amount
-                  const isClose = b.percent >= 80 && !isOverBudget
-                  
-                  let barColor = 'bg-emerald-500'
-                  let textColor = 'text-emerald-400'
-                  if (isOverBudget) {
-                    barColor = 'bg-red-500'
-                    textColor = 'text-red-400 font-bold'
-                  } else if (isClose) {
-                    barColor = 'bg-amber-500'
-                    textColor = 'text-amber-400'
-                  }
-
-                  return (
-                    <div key={b.id} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-semibold text-slate-350">
-                        <span>{b.categoryName}</span>
-                        <span className={textColor}>
-                          ${b.spent.toLocaleString()} / <span className="text-slate-500">${b.amount.toLocaleString()}</span>
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-850">
-                        <div
-                          className={`h-full rounded-full transition-all duration-550 ${barColor}`}
-                          style={{ width: `${percent}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Últimas Transacciones */}
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md lg:col-span-2 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Actividad Reciente</h3>
-              <Link href="/transactions" className="text-[10px] font-semibold text-emerald-450 hover:underline">
-                Ver Todas
-              </Link>
-            </div>
-
-            <div>
-              {recentTxs.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs italic">
-                  No hay transacciones registradas.
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-800/70">
-                  {recentTxs.map((tx) => {
-                    const category = categories.find(c => c.id === tx.category_id)
-                    const isIncome = tx.type === 'income'
-                    return (
-                      <div key={tx.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                          {isIncome ? '+' : '−'}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
-                            {category ? category.name : 'Sin categoría'} · {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                          </p>
-                        </div>
-                        <span className={`text-xs font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
+        </SortableContext>
+      </DndContext>
     </div>
   )
 }
