@@ -3,12 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
-import { 
-  FiArrowRight, 
-  FiPieChart, 
-  FiCheckSquare, 
-  FiSmartphone 
-} from 'react-icons/fi'
+import { FiArrowRight } from 'react-icons/fi'
 import LogoMark from '@/components/LogoMark'
 
 export default function LandingPage() {
@@ -124,8 +119,8 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-md shadow-sm">
-            <div className="w-10 h-10 bg-emerald-600/10 text-emerald-400 rounded-md flex items-center justify-center mb-5">
-              <FiPieChart className="w-5 h-5" />
+            <div className="w-12 h-12 bg-slate-800/50 rounded-md flex items-center justify-center mb-5">
+              <img src="/icons/report.png" alt="" className="w-8 h-8 object-contain" />
             </div>
             <h3 className="text-md font-bold mb-2 text-slate-100">Gráficos Analíticos</h3>
             <p className="text-slate-400 leading-relaxed text-xs">
@@ -135,8 +130,8 @@ export default function LandingPage() {
 
           {/* Card 2 */}
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-md shadow-sm">
-            <div className="w-10 h-10 bg-teal-600/10 text-teal-400 rounded-md flex items-center justify-center mb-5">
-              <FiCheckSquare className="w-5 h-5" />
+            <div className="w-12 h-12 bg-slate-800/50 rounded-md flex items-center justify-center mb-5">
+              <img src="/icons/planning.png" alt="" className="w-8 h-8 object-contain" />
             </div>
             <h3 className="text-md font-bold mb-2 text-slate-100">Control de Presupuestos</h3>
             <p className="text-slate-400 leading-relaxed text-xs">
@@ -146,8 +141,8 @@ export default function LandingPage() {
 
           {/* Card 3 */}
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-md shadow-sm">
-            <div className="w-10 h-10 bg-indigo-600/10 text-indigo-400 rounded-md flex items-center justify-center mb-5">
-              <FiSmartphone className="w-5 h-5" />
+            <div className="w-12 h-12 bg-slate-800/50 rounded-md flex items-center justify-center mb-5">
+              <img src="/icons/wallet.png" alt="" className="w-8 h-8 object-contain" />
             </div>
             <h3 className="text-md font-bold mb-2 text-slate-100">Soporte PWA</h3>
             <p className="text-slate-400 leading-relaxed text-xs">

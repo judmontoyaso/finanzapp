@@ -158,7 +158,10 @@ export default function DashboardPage() {
       {/* Título de la página */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Mi Control Financiero</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
+            <img src="/icons/report.png" alt="" className="w-7 h-7 object-contain" />
+            Mi Control Financiero
+          </h1>
           <p className="text-slate-400 text-xs mt-1">Resumen general y estadísticas de tus movimientos del mes.</p>
         </div>
         <Link

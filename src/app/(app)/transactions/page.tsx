@@ -391,7 +391,10 @@ export default function TransactionsPage() {
       {/* Título */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Historial de Transacciones</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
+            <img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" />
+            Historial de Transacciones
+          </h1>
           <p className="text-slate-400 text-xs mt-1">Busca, filtra, exporta y gestiona tus ingresos y gastos.</p>
         </div>
         <div className="flex items-center gap-2.5">

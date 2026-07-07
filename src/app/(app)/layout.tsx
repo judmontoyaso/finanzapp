@@ -10,12 +10,6 @@ import LogoMark from '@/components/LogoMark'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
   FiMenu,
-  FiGrid,
-  FiDollarSign,
-  FiFolder,
-  FiTrendingUp,
-  FiTag,
-  FiRepeat,
   FiLogOut,
   FiBriefcase,
   FiPlus,
@@ -26,12 +20,12 @@ import {
 import { WS_TYPES, wsTypeMeta } from '@/lib/workspaceMeta'
 
 const NAV_ITEMS = [
-  { label: 'Panel Principal', href: '/dashboard', icon: FiGrid },
-  { label: 'Transacciones', href: '/transactions', icon: FiDollarSign },
-  { label: 'Recurrentes', href: '/recurring', icon: FiRepeat },
-  { label: 'Presupuestos', href: '/budgets', icon: FiFolder },
-  { label: 'Metas de Ahorro', href: '/savings', icon: FiTrendingUp },
-  { label: 'Categorías', href: '/categories', icon: FiTag },
+  { label: 'Panel Principal', href: '/dashboard', icon: '/icons/report.png' },
+  { label: 'Transacciones', href: '/transactions', icon: '/icons/money-flow.png' },
+  { label: 'Recurrentes', href: '/recurring', icon: '/icons/forecast.png' },
+  { label: 'Presupuestos', href: '/budgets', icon: '/icons/planning.png' },
+  { label: 'Metas de Ahorro', href: '/savings', icon: '/icons/gold-ingots.png' },
+  { label: 'Categorías', href: '/categories', icon: '/icons/market.png' },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -324,7 +318,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href
-          const Icon = item.icon
           return (
             <Link
               key={item.href}
@@ -337,7 +330,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
               }`}
             >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-emerald-400' : ''}`} />
+              <img src={item.icon} alt="" className={`w-5 h-5 flex-shrink-0 object-contain transition-opacity ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
               {!collapsed && (
                 <span className="text-xs font-semibold whitespace-nowrap">{item.label}</span>
               )}
@@ -457,7 +450,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
                 {NAV_ITEMS.map((item) => {
                   const isActive = pathname === item.href
-                  const Icon = item.icon
                   return (
                     <Link
                       key={item.href}
@@ -465,11 +457,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={closeMobile}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-150 group ${
                         isActive
-                          ? 'bg-slate-800 text-slate-100 border-l-2 border-emerald-500'
+                          ? 'bg-slate-800 text-slate-100'
                           : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-emerald-400' : ''}`} />
+                      <img src={item.icon} alt="" className={`w-5 h-5 flex-shrink-0 object-contain transition-opacity ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
                       <span className="text-xs font-semibold whitespace-nowrap">{item.label}</span>
                     </Link>
                   )

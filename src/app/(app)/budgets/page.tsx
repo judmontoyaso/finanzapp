@@ -138,7 +138,10 @@ export default function BudgetsPage() {
     <div className="space-y-6 animate-fadeIn">
       {/* Cabecera */}
       <div>
-        <h1 className="text-xl font-bold text-slate-100 tracking-tight">Presupuestos de Gastos</h1>
+        <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
+          <img src="/icons/planning.png" alt="" className="w-7 h-7 object-contain" />
+          Presupuestos de Gastos
+        </h1>
         <p className="text-slate-400 text-xs mt-1">
           Asigna límites de gastos mensuales a tus categorías y vigila tu progreso en tiempo real.
         </p>

@@ -159,7 +159,10 @@ export default function SavingsPage() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Metas de Ahorro</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
+            <img src="/icons/gold-ingots.png" alt="" className="w-7 h-7 object-contain" />
+            Metas de Ahorro
+          </h1>
           <p className="text-slate-400 text-xs mt-1">
             Planea compras, fondos de emergencia o inversiones para tus futuros negocios.
           </p>

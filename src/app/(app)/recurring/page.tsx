@@ -155,7 +155,10 @@ export default function RecurringPage() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight">Transacciones Recurrentes</h1>
+          <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
+            <img src="/icons/forecast.png" alt="" className="w-7 h-7 object-contain" />
+            Transacciones Recurrentes
+          </h1>
           <p className="text-slate-400 text-xs mt-1">
             Plantillas de ingresos y gastos que se repiten. Te preguntamos antes de registrar cada una.
           </p>
