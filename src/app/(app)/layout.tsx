@@ -391,18 +391,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {sidebarContent}
       </aside>
 
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 h-14 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2.5">
-          <LogoMark className="w-6 h-6" />
-          <span className="text-sm font-bold text-slate-100">Arca Finanzas</span>
-        </div>
+      {/* Mobile Header (menú a la izquierda, del mismo lado que abre el sidebar) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b border-slate-800 h-14 flex items-center gap-3 px-4">
         <button
           onClick={() => setMobileOpen(true)}
           className="p-1.5 text-slate-400 hover:text-slate-100 rounded-md hover:bg-slate-800 transition-all cursor-pointer"
         >
           <FiMenu className="w-5 h-5" />
         </button>
+        <div className="flex items-center gap-2.5">
+          <LogoMark className="w-6 h-6" />
+          <span className="text-sm font-bold text-slate-100">Arca Finanzas</span>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
