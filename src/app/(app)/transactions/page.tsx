@@ -18,8 +18,11 @@ import {
   FiCamera,
   FiArrowUpRight,
   FiArrowDownLeft,
+  FiList,
+  FiColumns,
   FiX
 } from 'react-icons/fi'
+import TransactionsTable from '@/components/TransactionsTable'
 
 // Reduce y convierte una imagen a data URL JPEG (para no subir fotos pesadas)
 function fileToScaledDataURL(file: File, maxDim = 1100, quality = 0.7): Promise<string> {
@@ -59,6 +62,9 @@ export default function TransactionsPage() {
   // Filtros avanzados colapsables
   const [filtersOpen, setFiltersOpen] = useState(false)
 
+  // Vista: lista o tabla (persistida)
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('list')
+
   // Estado de modales
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -93,6 +99,16 @@ export default function TransactionsPage() {
     window.addEventListener('finanzas_data_changed', loadData)
     return () => window.removeEventListener('finanzas_data_changed', loadData)
   }, [])
+
+  useEffect(() => {
+    const v = localStorage.getItem('tx_view')
+    if (v === 'table' || v === 'list') setViewMode(v)
+  }, [])
+
+  const changeView = (v: 'list' | 'table') => {
+    setViewMode(v)
+    try { localStorage.setItem('tx_view', v) } catch {}
+  }
 
   // Filtrar transacciones
   const filteredTransactions = transactions
@@ -444,7 +460,25 @@ export default function TransactionsPage() {
 
       {/* LISTADO DE TRANSACCIONES */}
       <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
-        {paginatedTransactions.length === 0 ? (
+        {/* Toggle de vista */}
+        <div className="flex justify-end mb-3">
+          <div className="inline-flex bg-slate-950 border border-slate-800 rounded-md p-0.5">
+            <button
+              onClick={() => changeView('list')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <FiList className="w-3.5 h-3.5" /> Lista
+            </button>
+            <button
+              onClick={() => changeView('table')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${viewMode === 'table' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <FiColumns className="w-3.5 h-3.5" /> Tabla
+            </button>
+          </div>
+        </div>
+
+        {filteredTransactions.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
             <p className="text-xs font-semibold">No se encontraron movimientos.</p>
             <button
@@ -454,6 +488,13 @@ export default function TransactionsPage() {
               Limpiar Filtros
             </button>
           </div>
+        ) : viewMode === 'table' ? (
+          <TransactionsTable
+            transactions={filteredTransactions}
+            categories={categories}
+            onEdit={handleEditOpen}
+            onDelete={handleDelete}
+          />
         ) : (
           <div className="divide-y divide-slate-800/70">
             {paginatedTransactions.map((tx) => {
@@ -507,8 +548,8 @@ export default function TransactionsPage() {
           </div>
         )}
 
-        {/* Paginación */}
-        {totalPages > 1 && (
+        {/* Paginación (solo vista lista; la tabla tiene la suya) */}
+        {viewMode === 'list' && totalPages > 1 && (
           <div className="flex justify-between items-center mt-5 pt-4 border-t border-slate-800">
             <span className="text-[10px] text-slate-500 font-semibold">
               Mostrando {startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} de {filteredTransactions.length}

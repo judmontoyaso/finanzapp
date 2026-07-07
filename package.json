@@ -13,6 +13,7 @@
     "@heroicons/react": "^2.2.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.55.0",
+    "@tanstack/react-table": "^8.21.3",
     "@types/pg": "^8.15.5",
     "next": "15.4.10",
     "pg": "^8.16.3",
