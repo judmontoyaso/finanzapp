@@ -14,20 +14,21 @@
   only on colored buttons (emerald/rose/...) where it must stay white.
 */
 :root {
-  --color-slate-50:  #0f172a;
-  --color-slate-100: #0f172a; /* primary text -> near-black */
-  --color-slate-200: #1e293b;
-  --color-slate-300: #334155;
-  --color-slate-400: #475569; /* secondary text -> dark gray */
-  --color-slate-500: #64748b; /* muted text -> mid gray */
-  --color-slate-600: #94a3b8;
-  --color-slate-700: #cbd5e1;
-  --color-slate-800: #e2e8f0; /* borders / hover -> light */
-  --color-slate-900: #ffffff; /* cards -> white */
-  --color-slate-950: #f1f5f9; /* app background -> very light */
+  /* Tema claro cálido (beige/pastel), combina con el logo. */
+  --color-slate-50:  #2a2114; /* casi-negro cálido */
+  --color-slate-100: #3a2f1d; /* texto primario -> marrón oscuro */
+  --color-slate-200: #4a3d28;
+  --color-slate-300: #6b5c43;
+  --color-slate-400: #7d6e54; /* texto secundario */
+  --color-slate-500: #9c8c6f; /* texto tenue */
+  --color-slate-600: #b7a889;
+  --color-slate-700: #d8cbb2;
+  --color-slate-800: #e9dfca; /* bordes / hover -> beige */
+  --color-slate-900: #fffdf7; /* tarjetas -> crema claro */
+  --color-slate-950: #f4ecdd; /* fondo app -> beige suave */
 
-  --background: #f1f5f9;
-  --foreground: #0f172a;
+  --background: #f4ecdd;
+  --foreground: #3a2f1d;
 }
 
 .dark {

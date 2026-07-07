@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { FiSun, FiMoon } from 'react-icons/fi'
 
 export default function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [theme, setTheme] = useState<'dark' | 'light'>('light')
 
   useEffect(() => {
-    const stored = (localStorage.getItem('theme') as 'dark' | 'light') || 'dark'
+    const stored = (localStorage.getItem('theme') as 'dark' | 'light') || 'light'
     setTheme(stored)
   }, [])
 
