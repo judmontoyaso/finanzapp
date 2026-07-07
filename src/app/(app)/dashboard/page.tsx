@@ -20,7 +20,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type D
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-const DEFAULT_ORDER = ['metrics', 'summary', 'charts', 'budgets', 'activity']
+const DEFAULT_ORDER = ['metrics', 'summary', 'forecast', 'charts', 'budgets', 'activity']
 
 function SortableWidget({ id, editing, children }: { id: string; editing: boolean; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [dueRecurring, setDueRecurring] = useState<RecurringTransaction[]>([])
+  const [allRecurring, setAllRecurring] = useState<RecurringTransaction[]>([])
   const [overview, setOverview] = useState<(Workspace & { isOwner: boolean; income: number; expense: number; net: number })[]>([])
   const [activeWsId, setActiveWsId] = useState('')
   const [loading, setLoading] = useState(true)
@@ -77,11 +78,15 @@ export default function DashboardPage() {
     } catch {
       setOverview([])
     }
-    // Recurrentes pendientes (tabla opcional: no romper si aún no existe)
+    // Recurrentes (tabla opcional: no romper si aún no existe)
     try {
-      setDueRecurring(await LocalDB.getDueRecurring())
+      const rec = await LocalDB.getRecurring()
+      setAllRecurring(rec)
+      const t = new Date().toISOString().split('T')[0]
+      setDueRecurring(rec.filter((r) => r.active && r.next_date <= t))
     } catch {
       setDueRecurring([])
+      setAllRecurring([])
     }
   }
 
@@ -214,6 +219,14 @@ export default function DashboardPage() {
     )
   }
 
+  // Pronóstico de flujo (fin de mes): balance actual + recurrentes por venir este mes
+  const monthEndStr = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+  const nowStr = today.toISOString().split('T')[0]
+  const upcomingRec = allRecurring.filter((r) => r.active && r.next_date > nowStr && r.next_date <= monthEndStr)
+  const upIncome = upcomingRec.filter((r) => r.type === 'income').reduce((s, r) => s + r.amount, 0)
+  const upExpense = upcomingRec.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
+  const projectedEom = netBalance + upIncome - upExpense
+
   const widgetNodes: Record<string, React.ReactNode> = {
     metrics: (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -285,6 +298,35 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+      </div>
+    ),
+    forecast: (
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+        <div className="flex items-center gap-2.5 mb-4">
+          <img src="/icons/forecast.png" alt="" className="w-8 h-8 object-contain" />
+          <div>
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Pronóstico de Flujo</h3>
+            <p className="text-[10px] text-slate-500">Proyección al fin de mes con tus recurrentes.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Balance actual</span>
+            <p className={`text-lg font-extrabold ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>${netBalance.toLocaleString('es-ES')}</p>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Recurrentes por venir</span>
+            <p className="text-xs font-bold text-emerald-400">+${upIncome.toLocaleString('es-ES')}</p>
+            <p className="text-xs font-bold text-rose-400">−${upExpense.toLocaleString('es-ES')}</p>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Proyección fin de mes</span>
+            <p className={`text-lg font-extrabold ${projectedEom >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>${projectedEom.toLocaleString('es-ES')}</p>
+          </div>
+        </div>
+        {upcomingRec.length === 0 && (
+          <p className="text-[10px] text-slate-500 mt-3 italic">No hay recurrentes pendientes este mes. La proyección iguala tu balance actual.</p>
+        )}
       </div>
     ),
     charts: <DashboardCharts transactions={transactions} categories={categories} />,
