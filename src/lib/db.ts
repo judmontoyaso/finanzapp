@@ -14,7 +14,7 @@ export type User = {
 // Tipos de espacio de trabajo
 export type WorkspaceType = 'personal' | 'home' | 'business' | 'other'
 
-type SeedCategory = { name: string; type: 'income' | 'expense' }
+type SeedCategory = { name: string; type: 'income' | 'expense'; children?: { name: string }[] }
 
 // Plantillas de categorías por tipo de espacio (auto-llenado inicial)
 export const CATEGORY_TEMPLATES: Record<WorkspaceType, SeedCategory[]> = {
@@ -23,18 +23,28 @@ export const CATEGORY_TEMPLATES: Record<WorkspaceType, SeedCategory[]> = {
     { name: 'Inversiones', type: 'income' },
     { name: 'Otros Ingresos', type: 'income' },
     { name: 'Alquiler/Vivienda', type: 'expense' },
-    { name: 'Alimentación', type: 'expense' },
-    { name: 'Transporte', type: 'expense' },
+    { name: 'Alimentación', type: 'expense', children: [
+      { name: 'Supermercado' }, { name: 'Restaurante' }, { name: 'Cafetería' }, { name: 'Domicilios' }
+    ]},
+    { name: 'Transporte', type: 'expense', children: [
+      { name: 'Gasolina' }, { name: 'Uber/Taxi' }, { name: 'Transporte Público' }
+    ]},
     { name: 'Servicios Públicos', type: 'expense' },
-    { name: 'Entretenimiento/Ocio', type: 'expense' },
-    { name: 'Salud/Bienestar', type: 'expense' },
+    { name: 'Entretenimiento/Ocio', type: 'expense', children: [
+      { name: 'Streaming' }, { name: 'Salidas' }, { name: 'Viajes' }
+    ]},
+    { name: 'Salud/Bienestar', type: 'expense', children: [
+      { name: 'Medicamentos' }, { name: 'Consultas' }, { name: 'Gimnasio' }
+    ]},
     { name: 'Educación', type: 'expense' },
     { name: 'Ahorro / Inversión', type: 'expense' },
   ],
   home: [
     { name: 'Ingresos del Hogar', type: 'income' },
     { name: 'Otros Ingresos', type: 'income' },
-    { name: 'Mercado / Alimentación', type: 'expense' },
+    { name: 'Mercado / Alimentación', type: 'expense', children: [
+      { name: 'Supermercado' }, { name: 'Restaurante' }, { name: 'Cafetería' }, { name: 'Domicilios' }
+    ]},
     { name: 'Arriendo / Hipoteca', type: 'expense' },
     { name: 'Servicios (Agua/Luz/Gas)', type: 'expense' },
     { name: 'Internet / TV', type: 'expense' },
@@ -65,6 +75,23 @@ export const CATEGORY_TEMPLATES: Record<WorkspaceType, SeedCategory[]> = {
     { name: 'Gastos Generales', type: 'expense' },
     { name: 'Otros Gastos', type: 'expense' },
   ],
+}
+
+// Helper: construye un árbol de categorías a partir de la lista plana
+export type CategoryNode = Category & { children: CategoryNode[] }
+export function buildCategoryTree(cats: Category[]): CategoryNode[] {
+  const map = new Map<string, CategoryNode>()
+  const roots: CategoryNode[] = []
+  cats.forEach(c => map.set(c.id, { ...c, children: [] }))
+  cats.forEach(c => {
+    const node = map.get(c.id)!
+    if (c.parent_id && map.has(c.parent_id)) {
+      map.get(c.parent_id)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+  return roots
 }
 
 // Avanza una fecha (YYYY-MM-DD) según la frecuencia de recurrencia
@@ -134,14 +161,8 @@ export const LocalDB = {
 
       const created = (newWs && newWs.length > 0) ? newWs[0] : null
       if (created) {
-        // Sembrar categorías iniciales (plantilla personal)
-        const seedCats = CATEGORY_TEMPLATES.personal.map(cat => ({
-          name: cat.name,
-          type: cat.type,
-          workspace_id: created.id,
-          user_id: user.id
-        }))
-        await supabase.from('categories').insert(seedCats)
+        // Sembrar categorías iniciales (plantilla personal) con subcategorías
+        await this.seedCategoriesFromTemplate('personal', created.id, user.id)
 
         // El personal va primero para que sea el espacio activo por defecto
         workspaces.unshift(created)
@@ -198,16 +219,9 @@ export const LocalDB = {
 
     if (error) throw error
 
-    // Sembrar categorías según la plantilla del tipo elegido
+    // Sembrar categorías según la plantilla del tipo elegido (con subcategorías)
     const activeWs = (data && data.length > 0) ? data[0] : { id: 'fallback-ws-id', name, user_id: user.id, type: wsType }
-    const template = CATEGORY_TEMPLATES[wsType] || CATEGORY_TEMPLATES.other
-    const seedCats = template.map(cat => ({
-      name: cat.name,
-      type: cat.type,
-      workspace_id: activeWs.id,
-      user_id: user.id
-    }))
-    await supabase.from('categories').insert(seedCats)
+    await this.seedCategoriesFromTemplate(wsType, activeWs.id, user.id)
 
     this.dispatchEvent()
     return activeWs as Workspace
@@ -277,7 +291,7 @@ export const LocalDB = {
     return data as Category[]
   },
 
-  async addCategory(name: string, type: 'income' | 'expense'): Promise<Category> {
+  async addCategory(name: string, type: 'income' | 'expense', parent_id?: string | null): Promise<Category> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')
     const activeWs = this.getActiveWorkspaceId()
@@ -288,6 +302,7 @@ export const LocalDB = {
       .insert({
         name,
         type,
+        parent_id: parent_id || null,
         workspace_id: activeWs,
         user_id: user.id
       })
@@ -295,7 +310,7 @@ export const LocalDB = {
 
     if (error) throw error
     this.dispatchEvent()
-    return (data && data[0]) ? (data[0] as Category) : { id: 'fallback-cat-id', name, type, workspace_id: activeWs, user_id: user.id } as Category
+    return (data && data[0]) ? (data[0] as Category) : { id: 'fallback-cat-id', name, type, parent_id: parent_id || null, workspace_id: activeWs, user_id: user.id } as Category
   },
 
   async deleteCategory(id: string): Promise<void> {
@@ -360,6 +375,16 @@ export const LocalDB = {
       .from('transactions')
       .delete()
       .eq('id', id)
+
+    if (error) throw error
+    this.dispatchEvent()
+  },
+
+  async clearWorkspaceTransactions(workspaceId: string): Promise<void> {
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('workspace_id', workspaceId)
 
     if (error) throw error
     this.dispatchEvent()
@@ -715,6 +740,57 @@ export const LocalDB = {
     } catch {
       return false
     }
+  },
+
+  // --- SEED CATEGORIES WITH SUBCATEGORIES ---
+  async seedCategoriesFromTemplate(wsType: WorkspaceType, workspaceId: string, userId: string): Promise<void> {
+    const template = CATEGORY_TEMPLATES[wsType] || CATEGORY_TEMPLATES.other
+    for (const cat of template) {
+      const { data: parentData } = await supabase
+        .from('categories')
+        .insert({ name: cat.name, type: cat.type, workspace_id: workspaceId, user_id: userId })
+        .select('id')
+      if (cat.children && cat.children.length > 0 && parentData && parentData[0]) {
+        const children = cat.children.map(child => ({
+          name: child.name,
+          type: cat.type,
+          parent_id: parentData[0].id,
+          workspace_id: workspaceId,
+          user_id: userId
+        }))
+        await supabase.from('categories').insert(children)
+      }
+    }
+  },
+
+  // --- BULK INSERT (for imports) ---
+  async bulkAddTransactions(txs: Omit<Transaction, 'id' | 'created_at'>[]): Promise<void> {
+    if (txs.length === 0) return
+    // Insert in batches of 100
+    for (let i = 0; i < txs.length; i += 100) {
+      const batch = txs.slice(i, i + 100)
+      const { error } = await supabase.from('transactions').insert(batch)
+      if (error) throw error
+    }
+    this.dispatchEvent()
+  },
+
+  async bulkAddCategories(cats: { name: string; type: 'income' | 'expense'; parent_id?: string | null }[]): Promise<Category[]> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+    const activeWs = this.getActiveWorkspaceId()
+    if (!activeWs) throw new Error('No hay espacio activo')
+
+    const toInsert = cats.map(c => ({
+      ...c,
+      parent_id: c.parent_id || null,
+      workspace_id: activeWs,
+      user_id: user.id
+    }))
+    const { data, error } = await supabase.from('categories').insert(toInsert).select()
+    if (error) throw error
+    this.dispatchEvent()
+    return (data || []) as Category[]
   },
 
   // --- DISPATCH EVENTS ---

@@ -17,6 +17,7 @@ export type Category = {
   id: string
   name: string
   type: 'income' | 'expense'
+  parent_id?: string | null
   workspace_id?: string | null
   user_id?: string | null
   created_at: string

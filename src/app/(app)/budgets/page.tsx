@@ -51,11 +51,14 @@ export default function BudgetsPage() {
     (tx) => tx.type === 'expense' && tx.date.startsWith(currentMonthKey)
   )
 
-  // Armar lista extendida de presupuestos por categoría
+  // Armar lista extendida de presupuestos por categoría (incluyendo subcategorías)
   const budgetsList = expenseCategories.map((cat) => {
+    const childIds = categories.filter(c => c.parent_id === cat.id).map(c => c.id)
+    const categoryIdsToSum = [cat.id, ...childIds]
+
     const budget = budgets.find((b) => b.category_id === cat.id)
     const spent = currentMonthExpenses
-      .filter((tx) => tx.category_id === cat.id)
+      .filter((tx) => categoryIdsToSum.includes(tx.category_id))
       .reduce((sum, tx) => sum + tx.amount, 0)
     
     return {

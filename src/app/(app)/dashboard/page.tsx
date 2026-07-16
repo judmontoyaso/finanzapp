@@ -149,11 +149,14 @@ export default function DashboardPage() {
 
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0
 
-  // Obtener los presupuestos con su gasto actual
+  // Obtener los presupuestos con su gasto actual (con rollup de subcategorías)
   const budgetOverviews = budgets.map(b => {
     const category = categories.find(c => c.id === b.category_id)
+    const childIds = categories.filter(c => c.parent_id === b.category_id).map(c => c.id)
+    const categoryIdsToSum = [b.category_id, ...childIds]
+
     const spent = currentMonthTxs
-      .filter(tx => tx.category_id === b.category_id && tx.type === 'expense')
+      .filter(tx => categoryIdsToSum.includes(tx.category_id) && tx.type === 'expense')
       .reduce((sum, tx) => sum + tx.amount, 0)
     
     return {

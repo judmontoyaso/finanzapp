@@ -19,10 +19,18 @@ import {
   FiSettings
 } from 'react-icons/fi'
 import { WS_TYPES, wsTypeMeta } from '@/lib/workspaceMeta'
+import MobileTabBar from '@/components/MobileTabBar'
 
 const NAV_ITEMS = [
   { label: 'Panel Principal', href: '/dashboard', icon: '/icons/report.png' },
   { label: 'Transacciones', href: '/transactions', icon: '/icons/money-flow.png' },
+  { label: 'Recurrentes', href: '/recurring', icon: '/icons/forecast.png' },
+  { label: 'Presupuestos', href: '/budgets', icon: '/icons/planning.png' },
+  { label: 'Metas de Ahorro', href: '/savings', icon: '/icons/gold-ingots.png' },
+  { label: 'Categorías', href: '/categories', icon: '/icons/market.png' },
+]
+
+const MOBILE_DRAWER_ITEMS = [
   { label: 'Recurrentes', href: '/recurring', icon: '/icons/forecast.png' },
   { label: 'Presupuestos', href: '/budgets', icon: '/icons/planning.png' },
   { label: 'Metas de Ahorro', href: '/savings', icon: '/icons/gold-ingots.png' },
@@ -459,7 +467,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               {/* Navigation */}
               <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-                {NAV_ITEMS.map((item) => {
+                {MOBILE_DRAWER_ITEMS.map((item) => {
                   const isActive = pathname === item.href
                   return (
                     <Link
@@ -517,7 +525,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-slate-950 pt-14 md:pt-0">
+      <main className="flex-1 overflow-y-auto bg-slate-950 pt-14 pb-20 md:pt-0 md:pb-0">
         {/* Active workspace bar (avoids confusion when switching) */}
         {activeWorkspace && (
           <div className="md:sticky md:top-0 z-20 bg-slate-900 md:bg-slate-900/90 md:backdrop-blur border-b border-slate-800 px-6 md:px-8 py-3 flex items-center gap-3">
@@ -690,6 +698,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Tab Bar */}
+      <MobileTabBar />
 
     </div>
   )

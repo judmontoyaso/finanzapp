@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LocalDB } from '@/lib/db'
+import { LocalDB, buildCategoryTree } from '@/lib/db'
 import { Transaction, Category, TransactionItem } from '@/types'
 import { toast } from 'react-hot-toast'
 import {
@@ -127,6 +127,27 @@ export default function TransactionsPage() {
     window.addEventListener('finanzas_data_changed', loadData)
     return () => window.removeEventListener('finanzas_data_changed', loadData)
   }, [])
+
+  useEffect(() => {
+    if (!loading && categories.length > 0) {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('add') === 'true') {
+        openAddModal()
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, '', newUrl)
+      }
+    }
+  }, [loading, categories])
+
+  useEffect(() => {
+    const handleOpenAdd = () => {
+      if (categories.length > 0) {
+        openAddModal()
+      }
+    }
+    window.addEventListener('finanzas_open_add_transaction', handleOpenAdd)
+    return () => window.removeEventListener('finanzas_open_add_transaction', handleOpenAdd)
+  }, [categories])
 
   useEffect(() => {
     const v = localStorage.getItem('tx_view')
@@ -903,12 +924,25 @@ export default function TransactionsPage() {
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
-                    {formCats.length === 0 && <option value="">Sin categorías de este tipo</option>}
-                    {formCats.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {formCats.length === 0 ? (
+                      <option value="">Sin categorías de este tipo</option>
+                    ) : (
+                      buildCategoryTree(formCats).map((node) => {
+                        if (node.children.length === 0) {
+                          return <option key={node.id} value={node.id}>{node.name}</option>
+                        }
+                        return (
+                          <optgroup key={node.id} label={node.name}>
+                            <option value={node.id}>{node.name} (Principal)</option>
+                            {node.children.map((child) => (
+                              <option key={child.id} value={child.id}>
+                                ↳ {child.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )
+                      })
+                    )}
                   </select>
                 </div>
               </div>
@@ -1014,12 +1048,25 @@ export default function TransactionsPage() {
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
-                    {formCats.length === 0 && <option value="">Sin categorías de este tipo</option>}
-                    {formCats.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {formCats.length === 0 ? (
+                      <option value="">Sin categorías de este tipo</option>
+                    ) : (
+                      buildCategoryTree(formCats).map((node) => {
+                        if (node.children.length === 0) {
+                          return <option key={node.id} value={node.id}>{node.name}</option>
+                        }
+                        return (
+                          <optgroup key={node.id} label={node.name}>
+                            <option value={node.id}>{node.name} (Principal)</option>
+                            {node.children.map((child) => (
+                              <option key={child.id} value={child.id}>
+                                ↳ {child.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )
+                      })
+                    )}
                   </select>
                 </div>
               </div>
