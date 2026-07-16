@@ -28,14 +28,15 @@ export async function POST(request: Request) {
   const today = new Date().toISOString().split('T')[0]
   const cats = Array.isArray(body.categories) ? body.categories.filter(Boolean).slice(0, 40) : []
   const catInstruction = cats.length
-    ? `"category": elige EXACTAMENTE una de esta lista (o null si ninguna aplica): ${JSON.stringify(cats)}.`
-    : '"category": categoría de gasto sugerida en español (o null).'
+    ? `"category": elige EXACTAMENTE una de esta lista si encaja bien (o null si ninguna aplica): ${JSON.stringify(cats)}. `
+    : '"category": categoría de gasto sugerida en español (o null). '
   const prompt =
     'Eres un extractor de datos de recibos/facturas. Devuelve SOLO un JSON con estos campos: ' +
     '"amount" (número, el total pagado, sin símbolos ni separadores de miles), ' +
     '"date" (YYYY-MM-DD; LEE la fecha EXACTAMENTE como está impresa, incluido el año; NO la inventes ni la corrijas; si no aparece usa ' + today + '), ' +
     '"description" (nombre corto del comercio o de la compra), ' +
     catInstruction +
+    'Si ninguna categoría en la lista encaja bien, pon "category" como null y añade un objeto "newCategory" con "name" (nombre de la subcategoría/hijo sugerida, ej: "supermercado") y "parent" (nombre de la categoría principal/padre sugerida, ej: "Alimentación"). ' +
     ' "items": arreglo con las líneas del recibo, cada una {"description": nombre del producto, "amount": precio de esa línea como número}. ' +
     'Si no puedes leer las líneas, usa []. Si algún dato no se ve, usa null.'
 
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
       date?: string
       description?: string
       category?: string
+      newCategory?: { name: string; parent: string } | null
       items?: { description?: string; amount?: number }[]
     } = {}
     try {
@@ -94,6 +96,7 @@ export async function POST(request: Request) {
       date: parsed.date || today,
       description: parsed.description || '',
       category: parsed.category || '',
+      newCategory: parsed.newCategory || null,
       items,
     })
   } catch {

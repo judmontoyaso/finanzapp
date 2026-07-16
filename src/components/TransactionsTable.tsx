@@ -20,14 +20,28 @@ export default function TransactionsTable({
   categories,
   onEdit,
   onDelete,
+  onRowClick,
 }: {
   transactions: Transaction[]
   categories: Category[]
   onEdit: (tx: Transaction) => void
   onDelete: (id: string) => void
+  onRowClick?: (tx: Transaction) => void
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }])
-  const catName = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories])
+  const catName = useMemo(() => {
+    return new Map(
+      categories.map((c) => {
+        if (c.parent_id) {
+          const parent = categories.find((p) => p.id === c.parent_id)
+          if (parent) {
+            return [c.id, `${parent.name} / ${c.name}`]
+          }
+        }
+        return [c.id, c.name]
+      })
+    )
+  }, [categories])
 
   const columns = useMemo(
     () => [
@@ -139,12 +153,19 @@ export default function TransactionsTable({
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-slate-800/20">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className={`py-3 pr-3 text-slate-300 ${cell.column.id === 'actions' || cell.column.id === 'amount' ? 'text-right' : ''}`}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+              <tr key={row.id} className="hover:bg-slate-800/20 transition-colors">
+                {row.getVisibleCells().map((cell) => {
+                  const isActions = cell.column.id === 'actions'
+                  return (
+                    <td
+                      key={cell.id}
+                      onClick={() => !isActions && onRowClick?.(row.original)}
+                      className={`py-3 pr-3 text-slate-350 ${isActions ? 'text-right' : 'cursor-pointer'} ${cell.column.id === 'amount' ? 'text-right' : ''}`}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  )
+                })}
               </tr>
             ))}
           </tbody>

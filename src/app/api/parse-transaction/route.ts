@@ -30,9 +30,10 @@ export async function POST(request: Request) {
     `"date" (YYYY-MM-DD; interpreta "hoy"=${today}, "ayer", "anteayer", nombres de días o fechas relativas respecto a ${today}; si no se menciona, usa ${today}), ` +
     '"description" (breve, sin el monto), ' +
     (catList
-      ? `"category" (elige EXACTAMENTE una de esta lista según el tipo, o null si ninguna encaja): ${catList}.`
-      : '"category" (null).') +
-    ' Interpreta montos coloquiales: "50 mil"=50000, "2k"=2000, "1.5 millones"=1500000. Si es un gasto usa expense; ingresos/pagos recibidos usan income.'
+      ? `"category" (elige EXACTAMENTE una de esta lista si encaja bien con la descripción, o null si ninguna encaja): ${catList}. `
+      : '"category" (null). ') +
+    'Si ninguna categoría de la lista encaja bien, pon "category" como null y sugiere una nueva categoría agregando un objeto "newCategory" con "name" (nombre de la subcategoría/hijo, ej: "celular") y "parent" (nombre del grupo/categoría principal, ej: "deuda"). ' +
+    'Interpreta montos coloquiales: "50 mil"=50000, "2k"=2000, "1.5 millones"=1500000. Si es un gasto usa expense; ingresos/pagos recibidos usan income.'
 
   const parsed = (await generateJSON(system, `Texto: "${text}"`)) as {
     amount?: number
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     date?: string
     description?: string
     category?: string
+    newCategory?: { name: string; parent: string } | null
   } | null
 
   if (!parsed) {
@@ -53,5 +55,6 @@ export async function POST(request: Request) {
     date: parsed.date || today,
     description: parsed.description || '',
     category: parsed.category || '',
+    newCategory: parsed.newCategory || null,
   })
 }

@@ -89,6 +89,8 @@ export default function TransactionsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null)
+  const [aiNewCategory, setAiNewCategory] = useState<{ name: string; parent: string } | null>(null)
   // Formulario de añadir (controlado, para poder prellenar al escanear)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
   const [formCategory, setFormCategory] = useState('')
@@ -104,6 +106,16 @@ export default function TransactionsPage() {
   const [listening, setListening] = useState(false)
   // Fila expandida en la lista (para ver el detalle)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const getCategoryDisplayName = (catId: string) => {
+    const c = categories.find((cat) => cat.id === catId)
+    if (!c) return 'Sin categoría'
+    if (c.parent_id) {
+      const parent = categories.find((p) => p.id === c.parent_id)
+      if (parent) return `${parent.name} / ${c.name}`
+    }
+    return c.name
+  }
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
@@ -199,6 +211,7 @@ export default function TransactionsPage() {
     setFormDate(new Date().toISOString().slice(0, 10))
     setFormItems([])
     setNlText('')
+    setAiNewCategory(null)
     setIsAddModalOpen(true)
   }
 
@@ -267,12 +280,19 @@ export default function TransactionsPage() {
           ? data.items.map((it: TransactionItem) => ({ description: String(it.description || ''), amount: Number(it.amount) || 0 }))
           : []
       )
-      // El modelo elige de la lista real -> match exacto por nombre
-      const sug = String(data.category || '').toLowerCase().trim()
-      const match =
-        expenseCats.find((c) => c.name.toLowerCase() === sug) ||
-        expenseCats.find((c) => sug && c.name.toLowerCase().includes(sug))
-      setFormCategory(match?.id || expenseCats[0]?.id || '')
+      
+      setAiNewCategory(null)
+      if (data.newCategory) {
+        setAiNewCategory(data.newCategory)
+        setFormCategory('')
+      } else {
+        // El modelo elige de la lista real -> match exacto por nombre
+        const sug = String(data.category || '').toLowerCase().trim()
+        const match =
+          expenseCats.find((c) => c.name.toLowerCase() === sug) ||
+          expenseCats.find((c) => sug && c.name.toLowerCase().includes(sug))
+        setFormCategory(match?.id || expenseCats[0]?.id || '')
+      }
       setIsAddModalOpen(true)
       toast.success('Recibo leído. Revisa y confirma.')
     } catch {
@@ -295,6 +315,7 @@ export default function TransactionsPage() {
     const text = (textArg ?? nlText).trim()
     if (!text) return
     setNlLoading(true)
+    setAiNewCategory(null)
     try {
       const res = await fetch('/api/parse-transaction', {
         method: 'POST',
@@ -307,9 +328,16 @@ export default function TransactionsPage() {
       setFormDesc(d.description || '')
       setFormAmount(d.amount != null ? String(d.amount) : '')
       setFormDate(d.date || today())
-      const list = d.type === 'income' ? incomeCats : expenseCats
-      const m = list.find((c) => c.name.toLowerCase() === String(d.category || '').toLowerCase())
-      setFormCategory(m?.id || list[0]?.id || '')
+      
+      if (d.newCategory) {
+        setAiNewCategory(d.newCategory)
+        setFormCategory('')
+        toast.success(`La IA sugiere crear la categoría: ${d.newCategory.parent} / ${d.newCategory.name}`)
+      } else {
+        const list = d.type === 'income' ? incomeCats : expenseCats
+        const m = list.find((c) => c.name.toLowerCase() === String(d.category || '').toLowerCase())
+        setFormCategory(m?.id || list[0]?.id || '')
+      }
       setNlText('')
       toast.success('Interpretado. Revisa y guarda.')
     } catch {
@@ -323,6 +351,7 @@ export default function TransactionsPage() {
   const handleSuggestCategory = async () => {
     if (!formDesc.trim()) { toast.error('Escribe una descripción primero'); return }
     setSuggesting(true)
+    setAiNewCategory(null)
     try {
       const res = await fetch('/api/parse-transaction', {
         method: 'POST',
@@ -331,9 +360,15 @@ export default function TransactionsPage() {
       })
       const d = await res.json()
       if (!res.ok) { toast.error(d.error || 'No se pudo sugerir'); return }
-      const m = formCats.find((c) => c.name.toLowerCase() === String(d.category || '').toLowerCase())
-      if (m) { setFormCategory(m.id); toast.success('Categoría sugerida: ' + m.name) }
-      else toast('Sin sugerencia clara')
+      if (d.newCategory) {
+        setAiNewCategory(d.newCategory)
+        setFormCategory('')
+        toast.success(`La IA sugiere crear la categoría: ${d.newCategory.parent} / ${d.newCategory.name}`)
+      } else {
+        const m = formCats.find((c) => c.name.toLowerCase() === String(d.category || '').toLowerCase())
+        if (m) { setFormCategory(m.id); toast.success('Categoría sugerida: ' + m.name) }
+        else toast('Sin sugerencia clara')
+      }
     } catch {
       toast.error('Error de red')
     } finally {
@@ -361,17 +396,45 @@ export default function TransactionsPage() {
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const amount = parseFloat(formAmount)
-    if (!formDesc.trim() || isNaN(amount) || amount <= 0 || !formCategory || !formDate) {
+    if (!formDesc.trim() || isNaN(amount) || amount <= 0 || (!formCategory && !aiNewCategory) || !formDate) {
       toast.error('Completa descripción, monto, categoría y fecha')
       return
     }
     const items = cleanItems()
     try {
+      let finalCatId = formCategory
+      if (aiNewCategory) {
+        // Automatically create and set category if user didn't hit "crear y asignar" but tries to save
+        const { name, parent } = aiNewCategory
+        let parentId: string | null = null
+        const existingParent = categories.find(
+          (c) => c.name.toLowerCase() === parent.toLowerCase() && c.type === formType
+        )
+        if (existingParent) {
+          parentId = existingParent.id
+        } else {
+          const newParent = await LocalDB.addCategory(parent, formType)
+          parentId = newParent.id
+        }
+
+        const updatedCats = await LocalDB.getCategories()
+        const existingChild = updatedCats.find(
+          (c) => c.name.toLowerCase() === name.toLowerCase() && c.parent_id === parentId && c.type === formType
+        )
+        if (existingChild) {
+          finalCatId = existingChild.id
+        } else {
+          const newChild = await LocalDB.addCategory(name, formType, parentId)
+          finalCatId = newChild.id
+        }
+        await loadData()
+      }
+
       await LocalDB.addTransaction({
         description: formDesc.trim(),
         amount,
         type: formType,
-        category_id: formCategory,
+        category_id: finalCatId,
         date: formDate,
         details: items.length ? items : null,
       })
@@ -387,7 +450,48 @@ export default function TransactionsPage() {
     setFormType(tx.type)
     setFormCategory(tx.category_id)
     setFormItems(tx.details ? tx.details.map((it) => ({ ...it })) : [])
+    setAiNewCategory(null)
     setIsEditModalOpen(true)
+  }
+
+  const handleCreateAiCategory = async () => {
+    if (!aiNewCategory) return
+    const { name, parent } = aiNewCategory
+    const loadToast = toast.loading(`Creando categoría "${parent} / ${name}"...`)
+    try {
+      let parentId: string | null = null
+      const existingParent = categories.find(
+        (c) => c.name.toLowerCase() === parent.toLowerCase() && c.type === formType
+      )
+      if (existingParent) {
+        parentId = existingParent.id
+      } else {
+        const newParent = await LocalDB.addCategory(parent, formType)
+        parentId = newParent.id
+      }
+
+      const updatedCats = await LocalDB.getCategories()
+      const existingChild = updatedCats.find(
+        (c) => c.name.toLowerCase() === name.toLowerCase() && c.parent_id === parentId && c.type === formType
+      )
+      let childId: string | null = null
+      if (existingChild) {
+        childId = existingChild.id
+      } else {
+        const newChild = await LocalDB.addCategory(name, formType, parentId)
+        childId = newChild.id
+      }
+
+      await loadData()
+      setFormCategory(childId)
+      setAiNewCategory(null)
+      toast.dismiss(loadToast)
+      toast.success(`Categoría "${parent} / ${name}" creada y seleccionada`)
+    } catch (err) {
+      console.error(err)
+      toast.dismiss(loadToast)
+      toast.error('Error al crear la categoría sugerida')
+    }
   }
 
   const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -401,15 +505,42 @@ export default function TransactionsPage() {
     const date = formData.get('date') as string
     const description = formData.get('description') as string
 
-    if (!amountStr || !category_id || !type || !date || !description) return
+    if (!amountStr || (!category_id && !aiNewCategory) || !type || !date || !description) return
 
     const items = cleanItems()
     try {
+      let finalCatId = category_id
+      if (aiNewCategory) {
+        const { name, parent } = aiNewCategory
+        let parentId: string | null = null
+        const existingParent = categories.find(
+          (c) => c.name.toLowerCase() === parent.toLowerCase() && c.type === type
+        )
+        if (existingParent) {
+          parentId = existingParent.id
+        } else {
+          const newParent = await LocalDB.addCategory(parent, type)
+          parentId = newParent.id
+        }
+
+        const updatedCats = await LocalDB.getCategories()
+        const existingChild = updatedCats.find(
+          (c) => c.name.toLowerCase() === name.toLowerCase() && c.parent_id === parentId && c.type === type
+        )
+        if (existingChild) {
+          finalCatId = existingChild.id
+        } else {
+          const newChild = await LocalDB.addCategory(name, type, parentId)
+          finalCatId = newChild.id
+        }
+        await loadData()
+      }
+
       await LocalDB.updateTransaction(editingTransaction.id, {
         description,
         amount: parseFloat(amountStr),
         type,
-        category_id,
+        category_id: finalCatId,
         date,
         details: items.length ? items : null,
       })
@@ -691,11 +822,11 @@ export default function TransactionsPage() {
             categories={categories}
             onEdit={handleEditOpen}
             onDelete={handleDelete}
+            onRowClick={setSelectedDetailTx}
           />
         ) : (
           <div className="divide-y divide-slate-800/70">
             {paginatedTransactions.map((tx) => {
-              const category = categories.find((c) => c.id === tx.category_id)
               const isIncome = tx.type === 'income'
               const Arrow = isIncome ? FiArrowUpRight : FiArrowDownLeft
               const hasDetail = !!tx.details && tx.details.length > 0
@@ -704,38 +835,52 @@ export default function TransactionsPage() {
                 <div key={tx.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="group flex items-center gap-3">
                     {/* Icono por tipo */}
-                    <span className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                    <span
+                      onClick={() => setSelectedDetailTx(tx)}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer ${isIncome ? 'bg-emerald-500/10 text-emerald-450' : 'bg-rose-500/10 text-rose-400'}`}
+                    >
                       <Arrow className="w-4 h-4" />
                     </span>
 
                     {/* Descripción + categoría/fecha */}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
+                    <div
+                      onClick={() => setSelectedDetailTx(tx)}
+                      className="min-w-0 flex-1 cursor-pointer text-left"
+                    >
+                      <p className="text-sm font-bold text-slate-105 truncate leading-tight">{tx.description}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
-                        <span className="truncate">{category ? category.name : 'Sin categoría'}</span>
+                        <span className="truncate">{getCategoryDisplayName(tx.category_id)}</span>
                         <span className="text-slate-700">•</span>
                         <span className="whitespace-nowrap">
                           {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                         {hasDetail && (
-                          <button
-                            onClick={() => setExpandedId(isExpanded ? null : tx.id)}
-                            className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 hover:text-emerald-400 font-bold cursor-pointer"
-                          >
-                            {isExpanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
+                          <span className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 font-bold">
                             {tx.details!.length} ítem{tx.details!.length > 1 ? 's' : ''}
-                          </button>
+                          </span>
                         )}
                       </div>
                     </div>
 
                     {/* Monto */}
-                    <span className={`text-sm font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <span
+                      onClick={() => setSelectedDetailTx(tx)}
+                      className={`text-sm font-extrabold whitespace-nowrap cursor-pointer ${isIncome ? 'text-emerald-450' : 'text-rose-400'}`}
+                    >
                       {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                     </span>
 
                     {/* Acciones */}
                     <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      {hasDetail && (
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : tx.id)}
+                          title="Ver productos"
+                          className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                        >
+                          {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEditOpen(tx)}
                         title="Editar"
@@ -746,7 +891,7 @@ export default function TransactionsPage() {
                       <button
                         onClick={() => handleDelete(tx.id)}
                         title="Eliminar"
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                        className="p-1.5 text-slate-500 hover:text-rose-455 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
                       >
                         <FiTrash2 className="w-3.5 h-3.5" />
                       </button>
@@ -758,7 +903,7 @@ export default function TransactionsPage() {
                     <div className="mt-2 ml-12 bg-slate-950 border border-slate-800 rounded-md p-3 space-y-1.5">
                       {tx.details!.map((it, i) => (
                         <div key={i} className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-300 truncate pr-3">{it.description || 'Ítem'}</span>
+                          <span className="text-slate-350 truncate pr-3">{it.description || 'Ítem'}</span>
                           <span className="text-slate-400 font-semibold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
                         </div>
                       ))}
@@ -815,7 +960,7 @@ export default function TransactionsPage() {
       {/* MODAL: AGREGAR TRANSACCIÓN */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <button
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-100"
@@ -851,7 +996,7 @@ export default function TransactionsPage() {
                   type="button"
                   onClick={() => handleInterpret()}
                   disabled={nlLoading || !nlText.trim()}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold disabled:opacity-50 whitespace-nowrap"
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold disabled:opacity-50 whitespace-nowrap cursor-pointer"
                 >
                   {nlLoading ? '...' : 'Interpretar'}
                 </button>
@@ -919,11 +1064,12 @@ export default function TransactionsPage() {
                   </div>
                   <select
                     name="category_id"
-                    required
+                    required={!aiNewCategory}
                     value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
+                    onChange={(e) => { setFormCategory(e.target.value); setAiNewCategory(null); }}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
+                    {formCategory === '' && <option value="">-- Elige una categoría --</option>}
                     {formCats.length === 0 ? (
                       <option value="">Sin categorías de este tipo</option>
                     ) : (
@@ -947,19 +1093,35 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
+              {aiNewCategory && (
+                <div className="bg-emerald-950/20 border border-emerald-550/30 rounded-md p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
+                  <div className="text-xs">
+                    <span className="text-emerald-400 font-bold block">💡 Nueva categoría sugerida:</span>
+                    <span className="text-slate-200">{aiNewCategory.parent} <span className="text-slate-500">/</span> {aiNewCategory.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCreateAiCategory}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold self-start sm:self-center transition-all cursor-pointer"
+                  >
+                    Crear y Asignar
+                  </button>
+                </div>
+              )}
+
               {itemsEditor}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-350 rounded-md text-xs font-semibold transition-all"
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-350 rounded-md text-xs font-semibold transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all cursor-pointer"
                 >
                   Guardar Movimiento
                 </button>
@@ -972,7 +1134,7 @@ export default function TransactionsPage() {
       {/* MODAL: EDITAR TRANSACCIÓN */}
       {isEditModalOpen && editingTransaction && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <button
               onClick={() => { setIsEditModalOpen(false); setEditingTransaction(null); }}
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-100"
@@ -1043,11 +1205,12 @@ export default function TransactionsPage() {
                   </div>
                   <select
                     name="category_id"
-                    required
+                    required={!aiNewCategory}
                     value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
+                    onChange={(e) => { setFormCategory(e.target.value); setAiNewCategory(null); }}
                     className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
                   >
+                    {formCategory === '' && <option value="">-- Elige una categoría --</option>}
                     {formCats.length === 0 ? (
                       <option value="">Sin categorías de este tipo</option>
                     ) : (
@@ -1071,24 +1234,134 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
+              {aiNewCategory && (
+                <div className="bg-emerald-950/20 border border-emerald-550/30 rounded-md p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
+                  <div className="text-xs">
+                    <span className="text-emerald-400 font-bold block">💡 Nueva categoría sugerida:</span>
+                    <span className="text-slate-200">{aiNewCategory.parent} <span className="text-slate-500">/</span> {aiNewCategory.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCreateAiCategory}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold self-start sm:self-center transition-all cursor-pointer"
+                  >
+                    Crear y Asignar
+                  </button>
+                </div>
+              )}
+
               {itemsEditor}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => { setIsEditModalOpen(false); setEditingTransaction(null); }}
-                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-305 rounded-md text-xs font-semibold transition-all"
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-305 rounded-md text-xs font-semibold transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all cursor-pointer"
                 >
                   Actualizar Movimiento
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DETALLE DE TRANSACCIÓN */}
+      {selectedDetailTx && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative animate-fadeIn">
+            <button
+              onClick={() => setSelectedDetailTx(null)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100 cursor-pointer"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <div className="mb-4">
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                selectedDetailTx.type === 'income' ? 'bg-emerald-500/10 text-emerald-450' : 'bg-rose-500/10 text-rose-400'
+              }`}>
+                <span className={`w-1 h-1 rounded-full ${selectedDetailTx.type === 'income' ? 'bg-emerald-555' : 'bg-rose-500'}`}></span>
+                {selectedDetailTx.type === 'income' ? 'Ingreso' : 'Gasto'}
+              </span>
+              <h2 className="text-lg font-black text-slate-100 mt-2 tracking-tight leading-snug">{selectedDetailTx.description}</h2>
+            </div>
+
+            <div className="bg-slate-955 border border-slate-850 rounded-md p-4 mb-4 text-center">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
+              <span className={`text-2xl font-black block mt-1 ${
+                selectedDetailTx.type === 'income' ? 'text-emerald-450' : 'text-rose-450'
+              }`}>
+                {selectedDetailTx.type === 'income' ? '+' : '-'}${Math.abs(selectedDetailTx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <div className="space-y-3.5 text-xs pb-4 border-b border-slate-800">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Categoría</span>
+                <span className="text-slate-200 font-bold bg-slate-955 border border-slate-800 px-2 py-0.5 rounded-md text-[10px]">
+                  {getCategoryDisplayName(selectedDetailTx.category_id)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Fecha</span>
+                <span className="text-slate-200 font-semibold">
+                  {new Date(selectedDetailTx.date + 'T00:00:00').toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+            </div>
+
+            {/* Desglose de ítems */}
+            {selectedDetailTx.details && selectedDetailTx.details.length > 0 && (
+              <div className="mt-4">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-2">Desglose del recibo</span>
+                <div className="bg-slate-955 border border-slate-850 rounded-md p-3.5 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                  {selectedDetailTx.details.map((it, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs leading-normal">
+                      <span className="text-slate-355 truncate pr-3">{it.description || 'Ítem'}</span>
+                      <span className="text-slate-200 font-bold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDetailTx(null)
+                  handleEditOpen(selectedDetailTx)
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md text-xs font-bold transition-all cursor-pointer"
+              >
+                <FiEdit className="w-3.5 h-3.5" />
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const txId = selectedDetailTx.id
+                  setSelectedDetailTx(null)
+                  handleDelete(txId)
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-455 rounded-md text-xs font-bold transition-all cursor-pointer"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+                Eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}

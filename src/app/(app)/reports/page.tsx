@@ -27,6 +27,7 @@ export default function ReportsPage() {
     return new Date(today.getFullYear(), today.getMonth(), 1)
   })
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+  const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense')
 
   const loadData = async () => {
     try {
@@ -73,24 +74,22 @@ export default function ReportsPage() {
   const totalExpense = currentMonthTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0)
   const netBalance = totalIncome - totalExpense
 
-  // Agrupar categorías (árbol)
-  const expenseCategories = categories.filter(c => c.type === 'expense')
-  const rootExpenseCats = buildCategoryTree(expenseCategories)
+  // Agrupar categorías (árbol) por tipo activo (Gasto/Ingreso)
+  const reportCategories = categories.filter(c => c.type === activeTab)
+  const rootReportCats = buildCategoryTree(reportCategories)
 
   // Calcular montos por categoría/subcategoría para el mes actual
   const categoryAmounts: Record<string, number> = {}
-  currentMonthTxs.filter(t => t.type === 'expense').forEach(tx => {
+  currentMonthTxs.filter(t => t.type === activeTab).forEach(tx => {
     categoryAmounts[tx.category_id] = (categoryAmounts[tx.category_id] || 0) + Number(tx.amount)
   })
 
   // Calcular montos por categoría/subcategoría para el mes anterior
   const prevCategoryAmounts: Record<string, number> = {}
-  prevMonthTxs.filter(t => t.type === 'expense').forEach(tx => {
+  prevMonthTxs.filter(t => t.type === activeTab).forEach(tx => {
     prevCategoryAmounts[tx.category_id] = (prevCategoryAmounts[tx.category_id] || 0) + Number(tx.amount)
   })
 
-  // Estructura de datos para mostrar categorías con montos sumados (hijos acumulados en el padre si no se especifica)
-  // Pero lo ideal es calcular el monto del padre como la suma de sus transacciones directas + las transacciones de sus hijos.
   const getCatTotal = (node: CategoryNode): number => {
     let total = categoryAmounts[node.id] || 0
     node.children.forEach(child => {
@@ -108,7 +107,7 @@ export default function ReportsPage() {
   }
 
   // Generar datos para la lista de categorías principales con montos
-  const expenseReports = rootExpenseCats.map(node => {
+  const categoryReports = rootReportCats.map(node => {
     const amount = getCatTotal(node)
     const prevAmount = getPrevCatTotal(node)
     return {
@@ -119,10 +118,10 @@ export default function ReportsPage() {
   }).filter(item => item.amount > 0).sort((a, b) => b.amount - a.amount)
 
   // Datos para gráfico donut
-  const totalChartExpense = expenseReports.reduce((sum, item) => sum + item.amount, 0)
+  const totalChartAmount = categoryReports.reduce((sum, item) => sum + item.amount, 0)
   let accumulatedPercent = 0
-  const donutData = expenseReports.map((item, index) => {
-    const percentage = totalChartExpense > 0 ? (item.amount / totalChartExpense) * 100 : 0
+  const donutData = categoryReports.map((item, index) => {
+    const percentage = totalChartAmount > 0 ? (item.amount / totalChartAmount) * 100 : 0
     const color = COLORS[index % COLORS.length]
     const currentPercent = accumulatedPercent
     accumulatedPercent += percentage
@@ -134,6 +133,100 @@ export default function ReportsPage() {
       startPercent: currentPercent
     }
   })
+
+  // --- GRÁFICO DOBLE EJE: EVOLUCIÓN DIARIA ---
+  const year = selectedDate.getFullYear()
+  const month = selectedDate.getMonth()
+  const numDays = new Date(year, month + 1, 0).getDate()
+
+  const dailyIncome: Record<number, number> = {}
+  const dailyExpense: Record<number, number> = {}
+
+  for (let d = 1; d <= numDays; d++) {
+    dailyIncome[d] = 0
+    dailyExpense[d] = 0
+  }
+
+  currentMonthTxs.forEach(tx => {
+    const txDate = new Date(tx.date + 'T00:00:00')
+    const day = txDate.getDate()
+    if (tx.type === 'income') {
+      dailyIncome[day] = (dailyIncome[day] || 0) + Number(tx.amount)
+    } else {
+      dailyExpense[day] = (dailyExpense[day] || 0) + Number(tx.amount)
+    }
+  })
+
+  const dailyData = Array.from({ length: numDays }, (_, i) => {
+    const day = i + 1
+    return {
+      day,
+      income: dailyIncome[day],
+      expense: dailyExpense[day]
+    }
+  })
+
+  const maxIncome = Math.max(...dailyData.map(d => d.income), 10)
+  const maxExpense = Math.max(...dailyData.map(d => d.expense), 10)
+
+  const [hoveredDay, setHoveredDay] = useState<typeof dailyData[0] | null>(null)
+  const [hoveredX, setHoveredX] = useState<number | null>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = e.currentTarget
+    const rect = svg.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const svgX = (mouseX / rect.width) * 500
+
+    if (svgX >= 50 && svgX <= 450) {
+      const pct = (svgX - 50) / 400
+      const dayIndex = Math.min(
+        Math.max(Math.round(pct * (numDays - 1)), 0),
+        numDays - 1
+      )
+      setHoveredDay(dailyData[dayIndex])
+      setHoveredX(50 + (dayIndex / (numDays - 1)) * 400)
+    } else {
+      setHoveredDay(null)
+      setHoveredX(null)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    setHoveredDay(null)
+    setHoveredX(null)
+  }
+
+  const getLinePath = (data: typeof dailyData, type: 'income' | 'expense', maxVal: number) => {
+    return data.map((d, i) => {
+      const x = 50 + (i / (numDays - 1)) * 400
+      const val = type === 'income' ? d.income : d.expense
+      const y = 170 - (val / maxVal) * 150
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+    }).join(' ')
+  }
+
+  const getAreaPath = (data: typeof dailyData, type: 'income' | 'expense', maxVal: number) => {
+    const linePath = getLinePath(data, type, maxVal)
+    if (!linePath) return ''
+    const startX = 50
+    const endX = 50 + 400
+    return `${linePath} L ${endX} 170 L ${startX} 170 Z`
+  }
+
+  const leftTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => {
+    const val = maxIncome * pct
+    const y = 170 - pct * 150
+    return { val, y }
+  })
+
+  const rightTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => {
+    const val = maxExpense * pct
+    const y = 170 - pct * 150
+    return { val, y }
+  })
+
+  const xTicks = [1, Math.floor(numDays / 3), Math.floor(2 * numDays / 3), numDays]
 
   const toggleExpand = (catId: string) => {
     setExpandedCategories(prev => ({
@@ -233,162 +326,323 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Sección Gráfico y Detalle */}
-      {totalExpense === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-12 text-center text-slate-500">
-          <p className="text-xs font-semibold">No se registraron gastos en este mes.</p>
+      {/* Evolución Diaria (Doble Eje) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tendencia del Mes (Doble Eje)</h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Eje Izquierdo: <span className="text-emerald-500 font-bold">Ingresos</span> | Eje Derecho: <span className="text-rose-455 font-bold">Gastos</span>
+            </p>
+          </div>
+          {hoveredDay && (
+            <div className="bg-slate-955 border border-slate-850 px-3 py-1.5 rounded-md flex items-center gap-4 text-xs">
+              <span className="text-slate-405 font-medium">Día {hoveredDay.day}</span>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span className="text-slate-500">Ingreso:</span>
+                <span className="text-emerald-450 font-bold">{formatCurrency(hoveredDay.income)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                <span className="text-slate-500">Gasto:</span>
+                <span className="text-rose-455 font-bold">{formatCurrency(hoveredDay.expense)}</span>
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Gráfico Donut (custom SVG) */}
-          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md flex flex-col items-center justify-center space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider self-start">Distribución del Gasto</h2>
-            
-            <div className="relative w-44 h-44">
-              <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
-                {donutData.map((slice, i) => {
-                  const r = 45
-                  const circumference = 2 * Math.PI * r
-                  const strokeDash = (slice.percentage / 100) * circumference
-                  const strokeOffset = circumference - (slice.startPercent / 100) * circumference
-                  return (
-                    <circle
-                      key={i}
-                      cx="60"
-                      cy="60"
-                      r={r}
-                      fill="transparent"
-                      stroke={slice.color}
-                      strokeWidth="15"
-                      strokeDasharray={`${strokeDash} ${circumference}`}
-                      strokeDashoffset={strokeOffset}
-                      className="transition-all duration-500"
-                    />
-                  )
-                })}
-                <circle cx="60" cy="60" r="37.5" fill="#0f172a" /> {/* Centro */}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Gastado</span>
-                <span className="text-sm font-black text-slate-100">{formatCurrency(totalExpense)}</span>
+
+        <div className="relative w-full overflow-x-auto">
+          <svg
+            viewBox="0 0 500 200"
+            className="w-full min-w-[500px] h-auto overflow-visible select-none"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            <defs>
+              <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.2"/>
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0"/>
+              </linearGradient>
+              <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.2"/>
+                <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0"/>
+              </linearGradient>
+            </defs>
+
+            {/* Grid Lineas Horizontales */}
+            {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
+              <line
+                key={i}
+                x1="50"
+                y1={170 - pct * 150}
+                x2="450"
+                y2={170 - pct * 150}
+                stroke="#1e293b"
+                strokeWidth="1"
+                strokeDasharray="4 4"
+              />
+            ))}
+
+            {/* Eje X y Línea Base */}
+            <line x1="50" y1="170" x2="450" y2="170" stroke="#334155" strokeWidth="1" />
+
+            {/* Gradients y Líneas */}
+            <path d={getAreaPath(dailyData, 'income', maxIncome)} fill="url(#incomeGrad)" />
+            <path d={getAreaPath(dailyData, 'expense', maxExpense)} fill="url(#expenseGrad)" />
+
+            <path d={getLinePath(dailyData, 'income', maxIncome)} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+            <path d={getLinePath(dailyData, 'expense', maxExpense)} fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
+
+            {/* Eje Izquierdo - Ingresos */}
+            <line x1="50" y1="20" x2="50" y2="170" stroke="#10b981" strokeWidth="1.5" />
+            {leftTicks.map((tick, i) => (
+              <g key={i} className="text-[8px] fill-slate-400 font-semibold">
+                <line x1="46" y1={tick.y} x2="50" y2={tick.y} stroke="#10b981" strokeWidth="1" />
+                <text x="40" y={tick.y + 3} textAnchor="end" className="fill-emerald-500">${tick.val.toFixed(0)}</text>
+              </g>
+            ))}
+
+            {/* Eje Derecho - Gastos */}
+            <line x1="450" y1="20" x2="450" y2="170" stroke="#f43f5e" strokeWidth="1.5" />
+            {rightTicks.map((tick, i) => (
+              <g key={i} className="text-[8px] fill-slate-400 font-semibold">
+                <line x1="450" y1={tick.y} x2="454" y2={tick.y} stroke="#f43f5e" strokeWidth="1" />
+                <text x="460" y={tick.y + 3} textAnchor="start" className="fill-rose-455">${tick.val.toFixed(0)}</text>
+              </g>
+            ))}
+
+            {/* Etiquetas Eje X (Días) */}
+            {xTicks.map((day, i) => {
+              const x = 50 + ((day - 1) / (numDays - 1)) * 400
+              return (
+                <g key={i} className="text-[8px] fill-slate-400 font-semibold">
+                  <line x1={x} y1="170" x2={x} y2="174" stroke="#334155" strokeWidth="1" />
+                  <text x={x} y="184" textAnchor="middle">Día {day}</text>
+                </g>
+              )
+            })}
+
+            {/* Hover Cursor y Puntos */}
+            {hoveredX !== null && hoveredDay && (
+              <>
+                <line x1={hoveredX} y1="20" x2={hoveredX} y2="170" stroke="#64748b" strokeWidth="1" strokeDasharray="3 3" />
+                
+                {/* Punto Ingreso */}
+                <circle
+                  cx={hoveredX}
+                  cy={170 - (hoveredDay.income / maxIncome) * 150}
+                  r="4"
+                  fill="#10b981"
+                  stroke="#0f172a"
+                  strokeWidth="1.5"
+                />
+                
+                {/* Punto Gasto */}
+                <circle
+                  cx={hoveredX}
+                  cy={170 - (hoveredDay.expense / maxExpense) * 150}
+                  r="4"
+                  fill="#f43f5e"
+                  stroke="#0f172a"
+                  strokeWidth="1.5"
+                />
+              </>
+            )}
+          </svg>
+        </div>
+      </div>
+
+      {/* Detalle de Categorías (con selector de tipo) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Distribución por Categorías</h2>
+          
+          {/* Selector de Gastos / Ingresos */}
+          <div className="flex bg-slate-950 p-1 border border-slate-800 rounded-md">
+            <button
+              onClick={() => { setActiveTab('expense'); setExpandedCategories({}); }}
+              className={`px-3 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                activeTab === 'expense'
+                  ? 'bg-rose-500 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-100'
+              }`}
+            >
+              Gastos
+            </button>
+            <button
+              onClick={() => { setActiveTab('income'); setExpandedCategories({}); }}
+              className={`px-3 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                activeTab === 'income'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-100'
+              }`}
+            >
+              Ingresos
+            </button>
+          </div>
+        </div>
+
+        {totalChartAmount === 0 ? (
+          <div className="p-12 text-center text-slate-505">
+            <p className="text-xs font-semibold">No se registraron {activeTab === 'expense' ? 'gastos' : 'ingresos'} en este mes.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Gráfico Donut (custom SVG) */}
+            <div className="lg:col-span-2 flex flex-col items-center justify-center space-y-4">
+              <div className="relative w-44 h-44">
+                <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
+                  {donutData.map((slice, i) => {
+                    const r = 45
+                    const circumference = 2 * Math.PI * r
+                    const strokeDash = (slice.percentage / 100) * circumference
+                    const strokeOffset = circumference - (slice.startPercent / 100) * circumference
+                    return (
+                      <circle
+                        key={i}
+                        cx="60"
+                        cy="60"
+                        r={r}
+                        fill="transparent"
+                        stroke={slice.color}
+                        strokeWidth="15"
+                        strokeDasharray={`${strokeDash} ${circumference}`}
+                        strokeDashoffset={strokeOffset}
+                        className="transition-all duration-500"
+                      />
+                    )
+                  })}
+                  <circle cx="60" cy="60" r="37.5" fill="#0f172a" /> {/* Centro */}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{activeTab === 'expense' ? 'Gastado' : 'Recibido'}</span>
+                  <span className="text-sm font-black text-slate-100">{formatCurrency(totalChartAmount)}</span>
+                </div>
+              </div>
+
+              {/* Leyenda */}
+              <div className="w-full grid grid-cols-2 gap-2 text-[10px] pt-3 border-t border-slate-800">
+                {donutData.slice(0, 10).map((slice, i) => (
+                  <div key={i} className="flex items-center gap-1.5 overflow-hidden">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }}></span>
+                    <span className="text-slate-400 truncate flex-1 leading-tight">{slice.name}</span>
+                    <span className="text-slate-200 font-bold">{slice.percentage.toFixed(0)}%</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Leyenda */}
-            <div className="w-full grid grid-cols-2 gap-2 text-[10px] pt-3 border-t border-slate-800">
-              {donutData.slice(0, 10).map((slice, i) => (
-                <div key={i} className="flex items-center gap-1.5 overflow-hidden">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }}></span>
-                  <span className="text-slate-400 truncate flex-1 leading-tight">{slice.name}</span>
-                  <span className="text-slate-200 font-bold">{slice.percentage.toFixed(0)}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
+            {/* Desglose de Categorías */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                {categoryReports.map(({ node, amount, prevAmount }) => {
+                  const percent = totalChartAmount > 0 ? (amount / totalChartAmount) * 100 : 0
+                  const isExpanded = !!expandedCategories[node.id]
+                  
+                  // Variación mes a mes
+                  let pctDiff = 0
+                  let isUp = false
+                  if (prevAmount > 0) {
+                    pctDiff = ((amount - prevAmount) / prevAmount) * 100
+                    isUp = amount > prevAmount
+                  }
 
-          {/* Desglose de Categorías */}
-          <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md space-y-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Detalle por Categoría</h2>
-            
-            <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
-              {expenseReports.map(({ node, amount, prevAmount }) => {
-                const percent = totalExpense > 0 ? (amount / totalExpense) * 100 : 0
-                const isExpanded = !!expandedCategories[node.id]
-                
-                // Variación mes a mes
-                let pctDiff = 0
-                let isUp = false
-                if (prevAmount > 0) {
-                  pctDiff = ((amount - prevAmount) / prevAmount) * 100
-                  isUp = amount > prevAmount
-                }
+                  return (
+                    <div key={node.id} className="space-y-2 border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-4">
+                        {/* Título de Categoría */}
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-200 block truncate">{node.name}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] font-semibold text-slate-505">{percent.toFixed(1)}% del total</span>
+                            
+                            {/* Variación MoM */}
+                            {prevAmount > 0 && (
+                              <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold ${
+                                isUp 
+                                  ? (activeTab === 'expense' ? 'text-rose-455' : 'text-emerald-400') 
+                                  : (activeTab === 'expense' ? 'text-emerald-400' : 'text-rose-455')
+                              }`}>
+                                {isUp ? <FiTrendingUp className="w-2.5 h-2.5" /> : <FiTrendingDown className="w-2.5 h-2.5" />}
+                                {Math.abs(pctDiff).toFixed(0)}% vs mes ant.
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                return (
-                  <div key={node.id} className="space-y-2 border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-4">
-                      {/* Título de Categoría */}
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-200 block truncate">{node.name}</span>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-semibold text-slate-500">{percent.toFixed(1)}% del total</span>
-                          
-                          {/* Variación MoM */}
-                          {prevAmount > 0 && (
-                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold ${isUp ? 'text-rose-400' : 'text-emerald-400'}`}>
-                              {isUp ? <FiTrendingUp className="w-2.5 h-2.5" /> : <FiTrendingDown className="w-2.5 h-2.5" />}
-                              {Math.abs(pctDiff).toFixed(0)}% vs mes ant.
-                            </span>
+                        {/* Monto & Botón Expansor */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs font-black text-slate-100">{formatCurrency(amount)}</span>
+                          {node.children && node.children.length > 0 && (
+                            <button
+                              onClick={() => toggleExpand(node.id)}
+                              className="p-1 hover:bg-slate-850 rounded text-slate-400 hover:text-slate-100 cursor-pointer"
+                            >
+                              {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
+                            </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Monto & Botón Expansor */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs font-black text-slate-100">{formatCurrency(amount)}</span>
-                        {node.children && node.children.length > 0 && (
-                          <button
-                            onClick={() => toggleExpand(node.id)}
-                            className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 cursor-pointer"
-                          >
-                            {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
-                          </button>
-                        )}
+                      {/* Barra de Progreso */}
+                      <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-850">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            activeTab === 'expense' ? 'bg-rose-500/70' : 'bg-emerald-500'
+                          }`} 
+                          style={{ width: `${percent}%` }}
+                        ></div>
                       </div>
-                    </div>
 
-                    {/* Barra de Progreso */}
-                    <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-850">
-                      <div 
-                        className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${percent}%` }}
-                      ></div>
-                    </div>
-
-                    {/* Desglose de subcategorías hijas */}
-                    {node.children && node.children.length > 0 && isExpanded && (
-                      <div className="pl-6 space-y-2 mt-2 bg-slate-950/40 rounded-md p-3 border border-slate-850/50">
-                        {node.children
-                          .map(child => {
-                            const childAmount = categoryAmounts[child.id] || 0
-                            return { child, amount: childAmount }
-                          })
-                          .filter(item => item.amount > 0)
-                          .sort((a, b) => b.amount - a.amount)
-                          .map(({ child, amount: childAmount }) => {
-                            const childPercent = amount > 0 ? (childAmount / amount) * 100 : 0
-                            return (
-                              <div key={child.id} className="space-y-1">
-                                <div className="flex items-center justify-between text-[11px]">
-                                  <span className="text-slate-400 font-medium">{child.name}</span>
-                                  <span className="text-slate-300 font-bold">{formatCurrency(childAmount)}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-slate-900 rounded-full h-1 overflow-hidden">
-                                    <div 
-                                      className="bg-emerald-450/70 h-full rounded-full" 
-                                      style={{ width: `${childPercent}%` }}
-                                    ></div>
+                      {/* Desglose de subcategorías hijas */}
+                      {node.children && node.children.length > 0 && isExpanded && (
+                        <div className="pl-6 space-y-2 mt-2 bg-slate-950/40 rounded-md p-3 border border-slate-850/50">
+                          {node.children
+                            .map(child => {
+                              const childAmount = categoryAmounts[child.id] || 0
+                              return { child, amount: childAmount }
+                            })
+                            .filter(item => item.amount > 0)
+                            .sort((a, b) => b.amount - a.amount)
+                            .map(({ child, amount: childAmount }) => {
+                              const childPercent = amount > 0 ? (childAmount / amount) * 100 : 0
+                              return (
+                                <div key={child.id} className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-slate-400 font-medium">{child.name}</span>
+                                    <span className="text-slate-300 font-bold">{formatCurrency(childAmount)}</span>
                                   </div>
-                                  <span className="text-[9px] text-slate-500 font-semibold min-w-[30px] text-right">
-                                    {childPercent.toFixed(0)}%
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-slate-900 rounded-full h-1 overflow-hidden">
+                                      <div 
+                                        className={`h-full rounded-full ${
+                                          activeTab === 'expense' ? 'bg-rose-500/50' : 'bg-emerald-450/70'
+                                        }`} 
+                                        style={{ width: `${childPercent}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-[9px] text-slate-500 font-semibold min-w-[30px] text-right">
+                                      {childPercent.toFixed(0)}%
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            )
-                          })
-                        }
-                        {node.children.filter(child => (categoryAmounts[child.id] || 0) > 0).length === 0 && (
-                          <span className="text-[10px] text-slate-500 italic">No hay gastos en las subcategorías.</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                              )
+                            })
+                          }
+                          {node.children.filter(child => (categoryAmounts[child.id] || 0) > 0).length === 0 && (
+                            <span className="text-[10px] text-slate-500 italic">No hay registros en las subcategorías.</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
