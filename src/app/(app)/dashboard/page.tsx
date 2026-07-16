@@ -390,7 +390,7 @@ export default function DashboardPage() {
                   <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>{isIncome ? '+' : '−'}</span>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{category ? category.name : 'Sin categoría'} · {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{category ? category.name : 'Sin categoría'} · {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</p>
                   </div>
                   <span className={`text-xs font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>{isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
                 </div>

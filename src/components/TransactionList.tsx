@@ -44,7 +44,7 @@ export default async function TransactionList() {
           {transactions.map((transaction: any) => (
             <tr key={transaction.id}>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {new Date(transaction.date).toLocaleDateString()}
+                {new Date(transaction.date + 'T00:00:00').toLocaleDateString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {transaction.description}

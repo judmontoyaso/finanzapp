@@ -865,7 +865,7 @@ export default function TransactionsPage() {
                         <span className="truncate">{getCategoryDisplayName(tx.category_id)}</span>
                         <span className="text-slate-700">•</span>
                         <span className="whitespace-nowrap">
-                          {new Date(tx.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                         {hasDetail && (
                           <span className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 font-bold">

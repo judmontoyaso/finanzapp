@@ -254,7 +254,7 @@ export default function SavingsPage() {
                     </div>
                     {g.target_date && (
                       <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                        Límite: {new Date(g.target_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        Límite: {new Date(g.target_date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </span>
                     )}
                   </div>
