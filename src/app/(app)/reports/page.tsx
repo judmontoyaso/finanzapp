@@ -134,7 +134,7 @@ export default function ReportsPage() {
     }
   })
 
-  // --- GRÁFICO DOBLE EJE: EVOLUCIÓN DIARIA ---
+  // --- GRÁFICO EVOLUCIÓN DIARIA (un solo eje: misma unidad, misma escala) ---
   const year = selectedDate.getFullYear()
   const month = selectedDate.getMonth()
   const numDays = new Date(year, month + 1, 0).getDate()
@@ -166,8 +166,7 @@ export default function ReportsPage() {
     }
   })
 
-  const maxIncome = Math.max(...dailyData.map(d => d.income), 10)
-  const maxExpense = Math.max(...dailyData.map(d => d.expense), 10)
+  const maxDaily = Math.max(...dailyData.map(d => Math.max(d.income, d.expense)), 10)
 
   const [hoveredDay, setHoveredDay] = useState<typeof dailyData[0] | null>(null)
   const [hoveredX, setHoveredX] = useState<number | null>(null)
@@ -214,17 +213,18 @@ export default function ReportsPage() {
     return `${linePath} L ${endX} 170 L ${startX} 170 Z`
   }
 
-  const leftTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => {
-    const val = maxIncome * pct
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => {
+    const val = maxDaily * pct
     const y = 170 - pct * 150
     return { val, y }
   })
 
-  const rightTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => {
-    const val = maxExpense * pct
-    const y = 170 - pct * 150
-    return { val, y }
-  })
+  // Formato compacto para etiquetas del eje ($1.5M, $850K)
+  const fmtTick = (v: number) => {
+    if (v >= 1000000) return `$${(v / 1000000).toLocaleString('es-ES', { maximumFractionDigits: 1 })}M`
+    if (v >= 1000) return `$${Math.round(v / 1000)}K`
+    return `$${Math.round(v)}`
+  }
 
   const xTicks = [1, Math.floor(numDays / 3), Math.floor(2 * numDays / 3), numDays]
 
@@ -326,14 +326,21 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Evolución Diaria (Doble Eje) */}
+      {/* Evolución Diaria */}
       <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-md space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tendencia del Mes (Doble Eje)</h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Eje Izquierdo: <span className="text-emerald-500 font-bold">Ingresos</span> | Eje Derecho: <span className="text-rose-455 font-bold">Gastos</span>
-            </p>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tendencia del Mes</h2>
+            <div className="flex items-center gap-4 mt-1 text-[11px]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-slate-400 font-semibold">Ingresos</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span className="text-slate-400 font-semibold">Gastos</span>
+              </span>
+            </div>
           </div>
           {hoveredDay && (
             <div className="bg-slate-955 border border-slate-850 px-3 py-1.5 rounded-md flex items-center gap-4 text-xs">
@@ -352,10 +359,10 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div className="relative w-full overflow-x-auto">
+        <div className="relative w-full">
           <svg
             viewBox="0 0 500 200"
-            className="w-full min-w-[500px] h-auto overflow-visible select-none"
+            className="w-full h-auto overflow-visible select-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
@@ -387,28 +394,19 @@ export default function ReportsPage() {
             {/* Eje X y Línea Base */}
             <line x1="50" y1="170" x2="450" y2="170" stroke="#334155" strokeWidth="1" />
 
-            {/* Gradients y Líneas */}
-            <path d={getAreaPath(dailyData, 'income', maxIncome)} fill="url(#incomeGrad)" />
-            <path d={getAreaPath(dailyData, 'expense', maxExpense)} fill="url(#expenseGrad)" />
+            {/* Gradients y Líneas (misma escala para ambas series) */}
+            <path d={getAreaPath(dailyData, 'income', maxDaily)} fill="url(#incomeGrad)" />
+            <path d={getAreaPath(dailyData, 'expense', maxDaily)} fill="url(#expenseGrad)" />
 
-            <path d={getLinePath(dailyData, 'income', maxIncome)} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
-            <path d={getLinePath(dailyData, 'expense', maxExpense)} fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
+            <path d={getLinePath(dailyData, 'income', maxDaily)} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+            <path d={getLinePath(dailyData, 'expense', maxDaily)} fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
 
-            {/* Eje Izquierdo - Ingresos */}
-            <line x1="50" y1="20" x2="50" y2="170" stroke="#10b981" strokeWidth="1.5" />
-            {leftTicks.map((tick, i) => (
-              <g key={i} className="text-[8px] fill-slate-400 font-semibold">
-                <line x1="46" y1={tick.y} x2="50" y2={tick.y} stroke="#10b981" strokeWidth="1" />
-                <text x="40" y={tick.y + 3} textAnchor="end" className="fill-emerald-500">${tick.val.toFixed(0)}</text>
-              </g>
-            ))}
-
-            {/* Eje Derecho - Gastos */}
-            <line x1="450" y1="20" x2="450" y2="170" stroke="#f43f5e" strokeWidth="1.5" />
-            {rightTicks.map((tick, i) => (
-              <g key={i} className="text-[8px] fill-slate-400 font-semibold">
-                <line x1="450" y1={tick.y} x2="454" y2={tick.y} stroke="#f43f5e" strokeWidth="1" />
-                <text x="460" y={tick.y + 3} textAnchor="start" className="fill-rose-455">${tick.val.toFixed(0)}</text>
+            {/* Eje Y único */}
+            <line x1="50" y1="20" x2="50" y2="170" stroke="#334155" strokeWidth="1" />
+            {yTicks.map((tick, i) => (
+              <g key={i} className="text-[8px] font-semibold">
+                <line x1="46" y1={tick.y} x2="50" y2={tick.y} stroke="#334155" strokeWidth="1" />
+                <text x="42" y={tick.y + 3} textAnchor="end" className="fill-slate-400">{fmtTick(tick.val)}</text>
               </g>
             ))}
 
@@ -431,17 +429,17 @@ export default function ReportsPage() {
                 {/* Punto Ingreso */}
                 <circle
                   cx={hoveredX}
-                  cy={170 - (hoveredDay.income / maxIncome) * 150}
+                  cy={170 - (hoveredDay.income / maxDaily) * 150}
                   r="4"
                   fill="#10b981"
                   stroke="#0f172a"
                   strokeWidth="1.5"
                 />
-                
+
                 {/* Punto Gasto */}
                 <circle
                   cx={hoveredX}
-                  cy={170 - (hoveredDay.expense / maxExpense) * 150}
+                  cy={170 - (hoveredDay.expense / maxDaily) * 150}
                   r="4"
                   fill="#f43f5e"
                   stroke="#0f172a"
