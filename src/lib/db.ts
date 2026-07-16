@@ -313,6 +313,16 @@ export const LocalDB = {
     return (data && data[0]) ? (data[0] as Category) : { id: 'fallback-cat-id', name, type, parent_id: parent_id || null, workspace_id: activeWs, user_id: user.id } as Category
   },
 
+  async updateCategory(id: string, patch: { name?: string; parent_id?: string | null }): Promise<void> {
+    const { error } = await supabase
+      .from('categories')
+      .update(patch)
+      .eq('id', id)
+
+    if (error) throw error
+    this.dispatchEvent()
+  },
+
   async deleteCategory(id: string): Promise<void> {
     const { error } = await supabase
       .from('categories')

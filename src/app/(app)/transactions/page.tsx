@@ -171,12 +171,15 @@ export default function TransactionsPage() {
     try { localStorage.setItem('tx_view', v) } catch {}
   }
 
-  // Filtrar transacciones
+  // Filtrar transacciones (el filtro por categoría padre incluye sus subcategorías)
+  const filterCategoryIds = categoryFilter === 'all'
+    ? null
+    : new Set([categoryFilter, ...categories.filter((c) => c.parent_id === categoryFilter).map((c) => c.id)])
   const filteredTransactions = transactions
     .filter((tx) => {
       const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesType = typeFilter === 'all' || tx.type === typeFilter
-      const matchesCategory = categoryFilter === 'all' || tx.category_id === categoryFilter
+      const matchesCategory = !filterCategoryIds || filterCategoryIds.has(tx.category_id)
       
       let matchesStartDate = true
       if (startDate) {
@@ -752,12 +755,22 @@ export default function TransactionsPage() {
                 <option value="all">Todas las Categorías</option>
                 {incomeCats.length > 0 && (
                   <optgroup label="Ingresos">
-                    {incomeCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {buildCategoryTree(incomeCats).map((node) => [
+                      <option key={node.id} value={node.id}>{node.name}{node.children.length > 0 ? ' (incluye subcategorías)' : ''}</option>,
+                      ...node.children.map((child) => (
+                        <option key={child.id} value={child.id}>&nbsp;&nbsp;└ {child.name}</option>
+                      )),
+                    ])}
                   </optgroup>
                 )}
                 {expenseCats.length > 0 && (
                   <optgroup label="Gastos">
-                    {expenseCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {buildCategoryTree(expenseCats).map((node) => [
+                      <option key={node.id} value={node.id}>{node.name}{node.children.length > 0 ? ' (incluye subcategorías)' : ''}</option>,
+                      ...node.children.map((child) => (
+                        <option key={child.id} value={child.id}>&nbsp;&nbsp;└ {child.name}</option>
+                      )),
+                    ])}
                   </optgroup>
                 )}
               </select>

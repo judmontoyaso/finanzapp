@@ -182,10 +182,12 @@ export default function DashboardPage() {
   const incomeDelta = pctDelta(totalIncome, prevIncome)
   const expenseDelta = pctDelta(totalExpense, prevExpense)
 
-  // Categoría de mayor gasto del mes
+  // Categoría de mayor gasto del mes (subcategorías suman a su categoría padre)
   const expenseByCat = new Map<string, number>()
   currentMonthTxs.filter((t) => t.type === 'expense').forEach((t) => {
-    expenseByCat.set(t.category_id, (expenseByCat.get(t.category_id) || 0) + t.amount)
+    const cat = categories.find((c) => c.id === t.category_id)
+    const rootId = cat?.parent_id || t.category_id
+    expenseByCat.set(rootId, (expenseByCat.get(rootId) || 0) + t.amount)
   })
   let topCat: { name: string; amount: number } | null = null
   for (const [cid, amt] of expenseByCat) {
