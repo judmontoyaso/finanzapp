@@ -9,7 +9,7 @@ export const MOBILE_TABS = [
   { label: 'Movimientos', path: '/transactions', icon: '/icons/money-flow.png' },
   // El botón + va en el centro de forma especial
   { label: 'Reportes', path: '/reports', icon: '/icons/report.png' },
-  { label: 'Importar', path: '/import', icon: '/icons/invoice.png' },
+  { label: 'Presupuestos', path: '/budgets', icon: '/icons/planning.png' },
 ]
 
 export default function MobileTabBar() {

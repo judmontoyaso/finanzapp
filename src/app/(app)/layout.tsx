@@ -22,19 +22,21 @@ import { WS_TYPES, wsTypeMeta } from '@/lib/workspaceMeta'
 import MobileTabBar from '@/components/MobileTabBar'
 
 const NAV_ITEMS = [
-  { label: 'Panel Principal', href: '/dashboard', icon: '/icons/report.png' },
+  { label: 'Panel Principal', href: '/dashboard', icon: '/icons/wallet.png' },
   { label: 'Transacciones', href: '/transactions', icon: '/icons/money-flow.png' },
+  { label: 'Reportes', href: '/reports', icon: '/icons/report.png' },
   { label: 'Recurrentes', href: '/recurring', icon: '/icons/forecast.png' },
   { label: 'Presupuestos', href: '/budgets', icon: '/icons/planning.png' },
   { label: 'Metas de Ahorro', href: '/savings', icon: '/icons/gold-ingots.png' },
   { label: 'Categorías', href: '/categories', icon: '/icons/market.png' },
+  { label: 'Importar Datos', href: '/import', icon: '/icons/invoice.png' },
 ]
 
 const MOBILE_DRAWER_ITEMS = [
   { label: 'Recurrentes', href: '/recurring', icon: '/icons/forecast.png' },
-  { label: 'Presupuestos', href: '/budgets', icon: '/icons/planning.png' },
   { label: 'Metas de Ahorro', href: '/savings', icon: '/icons/gold-ingots.png' },
   { label: 'Categorías', href: '/categories', icon: '/icons/market.png' },
+  { label: 'Importar Datos', href: '/import', icon: '/icons/invoice.png' },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
