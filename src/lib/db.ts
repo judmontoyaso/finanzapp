@@ -774,27 +774,31 @@ export const LocalDB = {
   },
 
   // --- BULK INSERT (for imports) ---
-  async bulkAddTransactions(txs: Omit<Transaction, 'id' | 'created_at'>[]): Promise<void> {
+  async bulkAddTransactions(txs: Omit<Transaction, 'id' | 'created_at'>[], onProgress?: (percent: number) => void): Promise<void> {
     if (txs.length === 0) return
+    const total = txs.length
     // Insert in batches of 100
-    for (let i = 0; i < txs.length; i += 100) {
+    for (let i = 0; i < total; i += 100) {
       const batch = txs.slice(i, i + 100)
       const { error } = await supabase.from('transactions').insert(batch)
       if (error) throw error
+      if (onProgress) {
+        onProgress(Math.min(100, Math.round(((i + batch.length) / total) * 100)))
+      }
     }
     this.dispatchEvent()
   },
 
-  async bulkAddCategories(cats: { name: string; type: 'income' | 'expense'; parent_id?: string | null }[]): Promise<Category[]> {
+  async bulkAddCategories(cats: { name: string; type: 'income' | 'expense'; parent_id?: string | null; workspace_id?: string }[]): Promise<Category[]> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')
     const activeWs = this.getActiveWorkspaceId()
-    if (!activeWs) throw new Error('No hay espacio activo')
 
     const toInsert = cats.map(c => ({
-      ...c,
+      name: c.name,
+      type: c.type,
       parent_id: c.parent_id || null,
-      workspace_id: activeWs,
+      workspace_id: c.workspace_id || activeWs,
       user_id: user.id
     }))
     const { data, error } = await supabase.from('categories').insert(toInsert).select()
