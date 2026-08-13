@@ -46,6 +46,36 @@ function formatMonthName(ym: string): string {
   return `${MONTH_NAMES[mIndex] || month} ${year}`
 }
 
+// Obtener información relativa al mes actual calendario
+function getRelativeMonthInfo(ym: string) {
+  if (!ym || ym === 'all') return { label: 'Todos los Meses', badge: null, tag: 'all' as const }
+  
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1 // 1-12
+  const currentYm = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
+
+  const prevD = new Date(currentYear, currentMonth - 2, 1)
+  const prevYm = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}`
+
+  const nextD = new Date(currentYear, currentMonth, 1)
+  const nextYm = `${nextD.getFullYear()}-${String(nextD.getMonth() + 1).padStart(2, '0')}`
+
+  const monthName = formatMonthName(ym)
+
+  if (ym === currentYm) {
+    return { label: `${monthName} (Mes actual)`, badge: 'Mes actual', tag: 'current' as const }
+  }
+  if (ym === prevYm) {
+    return { label: `${monthName} (Mes anterior)`, badge: 'Mes anterior', tag: 'prev' as const }
+  }
+  if (ym === nextYm) {
+    return { label: `${monthName} (Mes siguiente)`, badge: 'Mes siguiente', tag: 'next' as const }
+  }
+
+  return { label: monthName, badge: null, tag: 'other' as const }
+}
+
 // Renderiza la primera página de un PDF a imagen (data URL) para el lector IA
 async function pdfFirstPageToDataURL(file: File): Promise<string> {
   const pdfjs = await import('pdfjs-dist')
@@ -163,6 +193,26 @@ export default function TransactionsPage() {
     return c.name
   }, [categories])
 
+  const openAddModal = useCallback(() => {
+    setFormType('expense')
+    const defaultCat = categories.find(c => c.type === 'expense')?.id || categories[0]?.id || ''
+    setFormCategory(defaultCat)
+    setFormDesc('')
+    setFormAmount('')
+    // Default a la fecha del mes seleccionado o hoy
+    const now = new Date()
+    const curYm = now.toISOString().slice(0, 7)
+    if (selectedMonth && selectedMonth !== 'all' && selectedMonth !== curYm) {
+      setFormDate(`${selectedMonth}-01`)
+    } else {
+      setFormDate(now.toISOString().slice(0, 10))
+    }
+    setFormItems([])
+    setNlText('')
+    setAiNewCategory(null)
+    setIsAddModalOpen(true)
+  }, [categories, selectedMonth])
+
   const loadData = async () => {
     try {
       const txs = await LocalDB.getTransactions()
@@ -170,14 +220,9 @@ export default function TransactionsPage() {
       setTransactions(txs)
       setCategories(cats)
 
-      // Si no hay mes seleccionado, seleccionar el mes de la transacción más reciente o el mes actual
-      if (txs.length > 0) {
-        const latestDate = txs[0].date
-        const latestMonth = latestDate ? latestDate.slice(0, 7) : new Date().toISOString().slice(0, 7)
-        setSelectedMonth((prev) => prev || latestMonth)
-      } else {
-        setSelectedMonth((prev) => prev || new Date().toISOString().slice(0, 7))
-      }
+      // Default inicial al mes actual si no hay mes seleccionado
+      const currentCalMonth = new Date().toISOString().slice(0, 7)
+      setSelectedMonth((prev) => prev || currentCalMonth)
     } catch (e) {
       console.error('Error cargando transacciones', e)
     } finally {
@@ -190,6 +235,26 @@ export default function TransactionsPage() {
     window.addEventListener('finanzas_data_changed', loadData)
     return () => window.removeEventListener('finanzas_data_changed', loadData)
   }, [])
+
+  // Listener para evento global de apertura de modal desde el botón +
+  useEffect(() => {
+    const handleOpen = () => openAddModal()
+    window.addEventListener('finanzas_open_add_transaction', handleOpen)
+    return () => window.removeEventListener('finanzas_open_add_transaction', handleOpen)
+  }, [openAddModal])
+
+  // Chequear parámetro ?add=true en URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('add') === 'true') {
+        openAddModal()
+        const url = new URL(window.location.href)
+        url.searchParams.delete('add')
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''))
+      }
+    }
+  }, [openAddModal])
 
   useEffect(() => {
     const v = localStorage.getItem('tx_view')
@@ -359,25 +424,6 @@ export default function TransactionsPage() {
   const expenseCats = categories.filter((c) => c.type === 'expense')
   const formCats = formType === 'income' ? incomeCats : expenseCats
   const activeFilterCount = [typeFilter !== 'all', categoryFilter !== 'all', !!startDate, !!endDate].filter(Boolean).length
-
-  const openAddModal = () => {
-    setFormType('expense')
-    setFormCategory(expenseCats[0]?.id || '')
-    setFormDesc('')
-    setFormAmount('')
-    // Default a la fecha del mes seleccionado o hoy
-    const now = new Date()
-    const curYm = now.toISOString().slice(0, 7)
-    if (selectedMonth && selectedMonth !== 'all' && selectedMonth !== curYm) {
-      setFormDate(`${selectedMonth}-01`)
-    } else {
-      setFormDate(now.toISOString().slice(0, 10))
-    }
-    setFormItems([])
-    setNlText('')
-    setAiNewCategory(null)
-    setIsAddModalOpen(true)
-  }
 
   // Toggle de acordeón de categorías
   const toggleCategoryAccordion = (catId: string) => {
@@ -802,11 +848,14 @@ export default function TransactionsPage() {
                 }}
                 className="bg-transparent text-slate-100 font-bold text-xs outline-none cursor-pointer truncate w-full"
               >
-                {availableMonths.map(ym => (
-                  <option key={ym} value={ym} className="bg-slate-950 text-slate-200">
-                    {formatMonthName(ym)}
-                  </option>
-                ))}
+                {availableMonths.map(ym => {
+                  const info = getRelativeMonthInfo(ym)
+                  return (
+                    <option key={ym} value={ym} className="bg-slate-950 text-slate-200">
+                      {info.label}
+                    </option>
+                  )
+                })}
                 <option value="all" className="bg-slate-950 text-slate-200">
                   -- Todos los Meses ({transactions.length}) --
                 </option>
@@ -821,15 +870,43 @@ export default function TransactionsPage() {
               <FiChevronRight className="w-4 h-4" />
             </button>
 
+            {/* Badge indicador del mes seleccionado */}
+            {(() => {
+              const rel = getRelativeMonthInfo(selectedMonth)
+              if (rel.tag === 'current') {
+                return (
+                  <span className="text-[10px] font-bold text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/30 whitespace-nowrap flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Mes actual
+                  </span>
+                )
+              }
+              if (rel.tag === 'prev') {
+                return (
+                  <span className="text-[10px] font-bold text-sky-400 px-2 py-1 bg-sky-500/10 rounded-full border border-sky-500/30 whitespace-nowrap">
+                    Mes anterior
+                  </span>
+                )
+              }
+              if (rel.tag === 'next') {
+                return (
+                  <span className="text-[10px] font-bold text-purple-400 px-2 py-1 bg-purple-500/10 rounded-full border border-purple-500/30 whitespace-nowrap">
+                    Mes siguiente
+                  </span>
+                )
+              }
+              return null
+            })()}
+
             {selectedMonth !== new Date().toISOString().slice(0, 7) && selectedMonth !== 'all' && (
               <button
                 onClick={() => {
                   setSelectedMonth(new Date().toISOString().slice(0, 7))
                   setCurrentPage(1)
                 }}
-                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 px-2 py-1.5 bg-emerald-500/10 rounded border border-emerald-500/20 transition-all cursor-pointer whitespace-nowrap"
+                className="text-[10px] font-bold text-slate-300 hover:text-emerald-300 px-2 py-1.5 bg-slate-950 hover:bg-slate-850 rounded border border-slate-800 transition-all cursor-pointer whitespace-nowrap"
               >
-                Mes Actual
+                Ir a Mes Actual
               </button>
             )}
           </div>
@@ -1326,16 +1403,27 @@ export default function TransactionsPage() {
                       onClick={() => setSelectedDetailTx(tx)}
                       className="min-w-0 flex-1 cursor-pointer text-left"
                     >
-                      <p className="text-sm font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
-                        <span className="truncate text-slate-400 font-semibold">{getCategoryDisplayName(tx.category_id)}</span>
-                        <span className="text-slate-700">•</span>
-                        <span className="whitespace-nowrap">
+                      <p className="text-sm font-bold text-slate-100 truncate leading-tight">
+                        {getCategoryDisplayName(tx.category_id)}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
+                        {tx.description && (
+                          <>
+                            <span className="truncate text-slate-300 font-medium max-w-[180px] sm:max-w-xs">{tx.description}</span>
+                            <span className="text-slate-700">•</span>
+                          </>
+                        )}
+                        <span className="whitespace-nowrap text-slate-400">
                           {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                         {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
                           <span className="ml-1 inline-flex items-center bg-slate-950 border border-slate-800 px-1.5 py-0.2 rounded text-[9px] text-slate-400">
                             {tx.details![0].description}
+                          </span>
+                        )}
+                        {hasDetail && !tx.details![0]?.description.startsWith('Bolsillo:') && (
+                          <span className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 font-bold">
+                            {tx.details!.length} ítem{tx.details!.length > 1 ? 's' : ''}
                           </span>
                         )}
                       </div>
