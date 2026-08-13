@@ -848,14 +848,11 @@ export default function TransactionsPage() {
                 }}
                 className="bg-transparent text-slate-100 font-bold text-xs outline-none cursor-pointer truncate w-full"
               >
-                {availableMonths.map(ym => {
-                  const info = getRelativeMonthInfo(ym)
-                  return (
-                    <option key={ym} value={ym} className="bg-slate-950 text-slate-200">
-                      {info.label}
-                    </option>
-                  )
-                })}
+                {availableMonths.map(ym => (
+                  <option key={ym} value={ym} className="bg-slate-950 text-slate-200">
+                    {formatMonthName(ym)}
+                  </option>
+                ))}
                 <option value="all" className="bg-slate-950 text-slate-200">
                   -- Todos los Meses ({transactions.length}) --
                 </option>
