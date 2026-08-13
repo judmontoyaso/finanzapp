@@ -18,7 +18,8 @@ import {
   FiBriefcase,
   FiSearch,
   FiPlus,
-  FiZap
+  FiZap,
+  FiCreditCard
 } from 'react-icons/fi'
 
 // Parser de CSV robusto con soporte para comillas, saltos de línea y eliminación de UTF-8 BOM
@@ -107,13 +108,14 @@ export default function ImportPage() {
     type: -1
   })
 
-  // Cuentas / Bolsillos de Money encontrados y su mapeo a Espacios de Trabajo (Workspaces)
+  // Cuentas / Bolsillos de Money encontrados en la columna Account del CSV
   const [moneyAccounts, setMoneyAccounts] = useState<{ name: string; count: number }[]>([])
-  const [accountWorkspaceMapping, setAccountWorkspaceMapping] = useState<Record<string, string>>({}) // Account Name -> Workspace ID (o '' para activo)
+  const [accountWorkspaceMapping, setAccountWorkspaceMapping] = useState<Record<string, string>>({}) // CSV Account Name -> Workspace ID
 
-  // Categorías de Money encontradas y su mapeo a Arca
-  const [csvCategories, setCsvCategories] = useState<{ name: string; count: number; dominantType: 'income' | 'expense' }[]>([])
+  // Categorías de Money encontradas y su mapeo a Arca y a Bolsillo del CSV
+  const [csvCategories, setCsvCategories] = useState<{ name: string; count: number; dominantType: 'income' | 'expense'; dominantAccount: string }[]>([])
   const [categoryMapping, setCategoryMapping] = useState<Record<string, string>>({}) // CSV Category Name -> Arca Category ID
+  const [categoryAccountMapping, setCategoryAccountMapping] = useState<Record<string, string>>({}) // CSV Category Name -> CSV Account Name
   const [newCategoriesToCreate, setNewCategoriesToCreate] = useState<Record<string, { name: string; type: 'income' | 'expense' }>>({})
   const [catSearchTerm, setCatSearchTerm] = useState('')
 
@@ -209,8 +211,8 @@ export default function ImportPage() {
       return
     }
 
-    // Extraer valores únicos de categorías y cuentas con sus conteos y tipos dominantes
-    const catStats: Record<string, { count: number; incomeCount: number; expenseCount: number }> = {}
+    // Extraer valores únicos de categorías y cuentas con sus conteos, tipos dominantes y cuentas más frecuentes
+    const catStats: Record<string, { count: number; incomeCount: number; expenseCount: number; accountCounts: Record<string, number> }> = {}
     const accountStats: Record<string, number> = {}
 
     csvRows.forEach(row => {
@@ -221,11 +223,15 @@ export default function ImportPage() {
 
       if (rawCat) {
         if (!catStats[rawCat]) {
-          catStats[rawCat] = { count: 0, incomeCount: 0, expenseCount: 0 }
+          catStats[rawCat] = { count: 0, incomeCount: 0, expenseCount: 0, accountCounts: {} }
         }
         catStats[rawCat].count++
         if (amtNum >= 0) catStats[rawCat].incomeCount++
         else catStats[rawCat].expenseCount++
+
+        if (rawAcc) {
+          catStats[rawCat].accountCounts[rawAcc] = (catStats[rawCat].accountCounts[rawAcc] || 0) + 1
+        }
       }
 
       if (rawAcc) {
@@ -238,11 +244,24 @@ export default function ImportPage() {
       .sort((a, b) => b.count - a.count)
 
     const categoriesList = Object.entries(catStats)
-      .map(([name, stat]) => ({
-        name,
-        count: stat.count,
-        dominantType: stat.incomeCount > stat.expenseCount ? ('income' as const) : ('expense' as const)
-      }))
+      .map(([name, stat]) => {
+        // Cuenta más común para esta categoría
+        let topAcc = ''
+        let maxAccCount = 0
+        Object.entries(stat.accountCounts).forEach(([acc, c]) => {
+          if (c > maxAccCount) {
+            maxAccCount = c
+            topAcc = acc
+          }
+        })
+
+        return {
+          name,
+          count: stat.count,
+          dominantType: stat.incomeCount > stat.expenseCount ? ('income' as const) : ('expense' as const),
+          dominantAccount: topAcc
+        }
+      })
       .sort((a, b) => b.count - a.count)
 
     setMoneyAccounts(accountsList)
@@ -263,6 +282,13 @@ export default function ImportPage() {
       catMap[c.name] = findBestCategoryMatch(c.name, categories)
     })
     setCategoryMapping(catMap)
+
+    // Inicializar cuenta por defecto para cada categoría
+    const catAccMap: Record<string, string> = {}
+    categoriesList.forEach(c => {
+      catAccMap[c.name] = c.dominantAccount || ''
+    })
+    setCategoryAccountMapping(catAccMap)
 
     setStep(3)
   }
@@ -354,7 +380,9 @@ export default function ImportPage() {
       const targetWorkspaceIds = new Set<string>()
       csvRows.forEach(row => {
         const rawAcc = colMapping.account !== -1 ? row[colMapping.account]?.trim() : ''
-        const targetWs = (rawAcc && accountWorkspaceMapping[rawAcc]) ? accountWorkspaceMapping[rawAcc] : activeWsId
+        const rawCat = colMapping.category !== -1 ? row[colMapping.category]?.trim() : ''
+        const assignedAcc = (rawCat && categoryAccountMapping[rawCat]) ? categoryAccountMapping[rawCat] : rawAcc
+        const targetWs = (assignedAcc && accountWorkspaceMapping[assignedAcc]) ? accountWorkspaceMapping[assignedAcc] : activeWsId
         if (targetWs) targetWorkspaceIds.add(targetWs)
       })
 
@@ -440,9 +468,12 @@ export default function ImportPage() {
           else if (['gasto', 'expense', 'out', '-', 'false'].includes(lt)) type = 'expense'
         }
 
+        // Cuenta/Bolsillo final asignado
+        const assignedAcc = (rawCat && categoryAccountMapping[rawCat]) ? categoryAccountMapping[rawCat] : rawAcc
+
         // Espacio destino según el bolsillo mapeado
-        const targetWsId = (rawAcc && accountWorkspaceMapping[rawAcc]) 
-          ? accountWorkspaceMapping[rawAcc] 
+        const targetWsId = (assignedAcc && accountWorkspaceMapping[assignedAcc]) 
+          ? accountWorkspaceMapping[assignedAcc] 
           : (activeWsId || workspaces[0]?.id || '')
 
         // Obtener ID de la categoría mapeada
@@ -463,9 +494,9 @@ export default function ImportPage() {
           matchedCatId = defaultCat ? defaultCat.id : ''
         }
 
-        // Construir detalle si viene con cuenta/bolsillo original
-        const details = rawAcc 
-          ? [{ description: `Bolsillo: ${rawAcc}`, amount: Math.abs(cleanAmount) }] 
+        // Construir detalle si viene con cuenta/bolsillo original o asignado
+        const details = assignedAcc 
+          ? [{ description: `Bolsillo: ${assignedAcc}`, amount: Math.abs(cleanAmount) }] 
           : null
 
         transactionsToInsert.push({
@@ -577,9 +608,9 @@ export default function ImportPage() {
               <FiInfo className="w-3.5 h-3.5" /> Soporte Especial para Migración MoneyLover
             </h3>
             <p className="text-[10px] text-slate-400 leading-relaxed">
-              El importador reconoce de forma automática los <strong>Bolsillos/Cuentas</strong> (ej. <em>Cash, Ahorro, Apto, Inversión Virtual</em>) 
-              y te permitirá asignarlos a tus <strong>Espacios de Trabajo</strong> correspondientes. Las <strong>Categorías</strong> se asociarán 
-              de forma separada a las categorías de ArcaFinanzas.
+              El importador reconoce de forma automática los <strong>Bolsillos/Cuentas</strong> (ej. <em>Cash, Ahorro, Apto, Inversión Virtual, Fiducia, Cuenta Deuda Casa</em>) 
+              a partir de la columna <strong>Account (Cuenta)</strong> del CSV y te permite asignarlos a tus <strong>Espacios de Trabajo</strong>. Las <strong>Categorías</strong> se asocian 
+              a las categorías de ArcaFinanzas.
             </p>
           </div>
         </div>
@@ -599,7 +630,7 @@ export default function ImportPage() {
               { key: 'amount', label: 'Monto (Obligatorio)', hint: 'Valor neto positivo o negativo (ej. Amount)' },
               { key: 'description', label: 'Nota / Descripción (Opcional)', hint: 'Concepto o nota (ej. Note o Concepto)' },
               { key: 'category', label: 'Categoría (Opcional)', hint: 'Categoría del movimiento (ej. Category)' },
-              { key: 'account', label: 'Bolsillo / Cuenta (Opcional)', hint: 'Bolsillo o cuenta de origen (ej. Account)' },
+              { key: 'account', label: 'Bolsillo / Cuenta (Opcional)', hint: 'Columna de Bolsillo/Cuenta en el CSV (ej. Account)' },
               { key: 'subcategory', label: 'Subcategoría (Opcional)', hint: 'Subcategoría secundaria si existe' },
               { key: 'type', label: 'Tipo de Movimiento (Opcional)', hint: 'Ingreso o Gasto explícito' },
             ].map((col) => (
@@ -670,7 +701,7 @@ export default function ImportPage() {
           <div>
             <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Mapeo de Bolsillos y Categorías</h2>
             <p className="text-slate-400 text-xs leading-relaxed mt-0.5">
-              Configura a qué Espacio de Trabajo se enviarán los bolsillos y cómo se mapearán las categorías del CSV.
+              Configura a qué Espacio de Trabajo se enviarán los bolsillos encontrados en la columna Cuenta del CSV y mapea las categorías.
             </p>
           </div>
 
@@ -681,10 +712,10 @@ export default function ImportPage() {
                 <div>
                   <h3 className="text-xs font-bold text-emerald-450 uppercase tracking-wide flex items-center gap-2">
                     <FiBriefcase className="w-3.5 h-3.5 text-emerald-400" />
-                    Bolsillos / Cuentas de Origen ({moneyAccounts.length})
+                    Bolsillos / Cuentas encontrados en el CSV ({moneyAccounts.length})
                   </h3>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    Asigna cada bolsillo del CSV a un <strong>Espacio de Trabajo</strong> de ArcaFinanzas.
+                    Cuentas extraídas de la columna <strong>Account (Cuenta)</strong> del archivo. Asigna cada una a un <strong>Espacio de Trabajo</strong> de Arca.
                   </p>
                 </div>
               </div>
@@ -698,13 +729,14 @@ export default function ImportPage() {
                     <div key={acc.name} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-md p-3">
                       <div>
                         <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                          <FiCreditCard className="w-3.5 h-3.5 text-emerald-400" />
                           {acc.name}
                           <span className="text-[9px] bg-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
                             {acc.count} movs
                           </span>
                         </span>
                         <span className="text-[10px] text-slate-500 block mt-0.5">
-                          Destino: {targetWs ? targetWs.name : 'Espacio activo actual'}
+                          Destino en Arca: <strong className="text-emerald-400 font-semibold">{targetWs ? targetWs.name : 'Espacio activo actual'}</strong>
                         </span>
                       </div>
 
@@ -718,7 +750,7 @@ export default function ImportPage() {
                             const meta = wsTypeMeta(ws.type)
                             return (
                               <option key={ws.id} value={ws.id}>
-                                {ws.name} ({meta.label})
+                                Espacio: {ws.name} ({meta.label})
                               </option>
                             )
                           })}
@@ -788,7 +820,7 @@ export default function ImportPage() {
                   Categorías del CSV ({csvCategories.length})
                 </h3>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Asocia las categorías de tu archivo con las de Arca o créalas directamente.
+                  Asocia las categorías con las de Arca y asigna opcionalmente su cuenta/bolsillo del CSV.
                 </p>
               </div>
 
@@ -819,6 +851,7 @@ export default function ImportPage() {
               {filteredCsvCategories.map((csvCat) => {
                 const isNew = !!newCategoriesToCreate[csvCat.name]
                 const currentVal = categoryMapping[csvCat.name] || ''
+                const selectedAcc = categoryAccountMapping[csvCat.name] || ''
 
                 return (
                   <div key={csvCat.name} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950 border border-slate-850 rounded-md p-3">
@@ -835,7 +868,7 @@ export default function ImportPage() {
                         </span>
                       ) : currentVal ? (
                         <span className="text-[9px] text-slate-500 block mt-0.5">
-                          Mapeada a: <span className="text-emerald-400 font-semibold">{categories.find(c => c.id === currentVal)?.name}</span>
+                          Categoría Arca: <span className="text-emerald-400 font-semibold">{categories.find(c => c.id === currentVal)?.name}</span>
                         </span>
                       ) : (
                         <span className="text-[9px] text-yellow-500/80 block mt-0.5">
@@ -844,12 +877,30 @@ export default function ImportPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                      {/* Selector de Bolsillo / Cuenta del CSV */}
+                      {moneyAccounts.length > 0 && (
+                        <select
+                          value={selectedAcc}
+                          onChange={(e) => setCategoryAccountMapping(prev => ({ ...prev, [csvCat.name]: e.target.value }))}
+                          title="Bolsillo / Cuenta de la columna Account del CSV"
+                          className="bg-slate-900 border border-slate-800 text-slate-300 rounded-md py-1.5 px-2 text-[11px] focus:border-emerald-500 outline-none cursor-pointer"
+                        >
+                          <option value="">-- Cuenta CSV: {csvCat.dominantAccount || 'Original'} --</option>
+                          {moneyAccounts.map(acc => (
+                            <option key={acc.name} value={acc.name}>
+                              Bolsillo: {acc.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {/* Selector de Categoría de Arca */}
                       {!isNew && (
                         <select
                           value={currentVal}
                           onChange={(e) => handleMapToExisting(csvCat.name, e.target.value)}
-                          className="bg-slate-900 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none w-full sm:w-56 cursor-pointer"
+                          className="bg-slate-900 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none w-full sm:w-48 cursor-pointer"
                         >
                           <option value="">-- Mapear a existente --</option>
                           {categories.map(c => (
