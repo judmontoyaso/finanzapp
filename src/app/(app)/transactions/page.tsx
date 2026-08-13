@@ -779,27 +779,28 @@ export default function TransactionsPage() {
       </div>
 
       {/* NAVEGADOR DE MESES Y RESUMEN FINANCIERO */}
-      <div className="bg-slate-900 border border-slate-800 rounded-md p-4 shadow-sm space-y-4">
-        {/* Selector de Mes */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
-          <div className="flex items-center gap-2">
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-3.5 sm:p-4 shadow-sm space-y-4 overflow-hidden">
+        {/* Barra Superior: Selector de Mes + Modos de Vista */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+          {/* Navegador de Mes */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={handlePrevMonth}
               title="Mes anterior"
-              className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md transition-all cursor-pointer"
+              className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md transition-all cursor-pointer shrink-0"
             >
               <FiChevronLeft className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5">
-              <FiCalendar className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-md px-2.5 py-1.5 min-w-0 max-w-[220px] sm:max-w-xs">
+              <FiCalendar className="w-4 h-4 text-emerald-400 shrink-0" />
               <select
                 value={selectedMonth}
                 onChange={(e) => {
                   setSelectedMonth(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="bg-transparent text-slate-100 font-bold text-xs outline-none cursor-pointer pr-2"
+                className="bg-transparent text-slate-100 font-bold text-xs outline-none cursor-pointer truncate w-full"
               >
                 {availableMonths.map(ym => (
                   <option key={ym} value={ym} className="bg-slate-950 text-slate-200">
@@ -807,7 +808,7 @@ export default function TransactionsPage() {
                   </option>
                 ))}
                 <option value="all" className="bg-slate-950 text-slate-200">
-                  -- Todos los Meses ({transactions.length} movs) --
+                  -- Todos los Meses ({transactions.length}) --
                 </option>
               </select>
             </div>
@@ -815,7 +816,7 @@ export default function TransactionsPage() {
             <button
               onClick={handleNextMonth}
               title="Mes siguiente"
-              className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md transition-all cursor-pointer"
+              className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md transition-all cursor-pointer shrink-0"
             >
               <FiChevronRight className="w-4 h-4" />
             </button>
@@ -826,7 +827,7 @@ export default function TransactionsPage() {
                   setSelectedMonth(new Date().toISOString().slice(0, 7))
                   setCurrentPage(1)
                 }}
-                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 px-2 py-1 bg-emerald-500/10 rounded border border-emerald-500/20 transition-all cursor-pointer"
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 px-2 py-1.5 bg-emerald-500/10 rounded border border-emerald-500/20 transition-all cursor-pointer whitespace-nowrap"
               >
                 Mes Actual
               </button>
@@ -834,30 +835,30 @@ export default function TransactionsPage() {
           </div>
 
           {/* Selector de Modo de Visualización */}
-          <div className="inline-flex bg-slate-950 border border-slate-800 rounded-md p-0.5 self-start sm:self-auto">
+          <div className="grid grid-cols-3 sm:inline-flex bg-slate-950 border border-slate-800 rounded-md p-0.5 w-full md:w-auto">
             <button
               onClick={() => changeView('categories')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer truncate ${
                 viewMode === 'categories' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <FiFolder className="w-3.5 h-3.5" /> Por Categorías
+              <FiFolder className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Categorías</span>
             </button>
             <button
               onClick={() => changeView('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer truncate ${
                 viewMode === 'list' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <FiList className="w-3.5 h-3.5" /> Lista
+              <FiList className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Lista</span>
             </button>
             <button
               onClick={() => changeView('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer truncate ${
                 viewMode === 'table' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <FiColumns className="w-3.5 h-3.5" /> Tabla
+              <FiColumns className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Tabla</span>
             </button>
           </div>
         </div>
