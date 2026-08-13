@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { LocalDB, buildCategoryTree } from '@/lib/db'
 import { Transaction, Category, TransactionItem } from '@/types'
 import { toast } from 'react-hot-toast'
@@ -21,10 +21,30 @@ import {
   FiArrowDownLeft,
   FiList,
   FiColumns,
+  FiGrid,
   FiZap,
   FiMic,
-  FiX
+  FiX,
+  FiCalendar,
+  FiTrendingDown,
+  FiTrendingUp,
+  FiDollarSign,
+  FiFolder
 } from 'react-icons/fi'
+import TransactionsTable from '@/components/TransactionsTable'
+
+// Nombres de meses en español
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+]
+
+function formatMonthName(ym: string): string {
+  if (!ym || ym === 'all') return 'Todos los Meses'
+  const [year, month] = ym.split('-')
+  const mIndex = parseInt(month, 10) - 1
+  return `${MONTH_NAMES[mIndex] || month} ${year}`
+}
 
 // Renderiza la primera página de un PDF a imagen (data URL) para el lector IA
 async function pdfFirstPageToDataURL(file: File): Promise<string> {
@@ -42,7 +62,6 @@ async function pdfFirstPageToDataURL(file: File): Promise<string> {
   await page.render({ canvas, canvasContext: ctx, viewport }).promise
   return canvas.toDataURL('image/jpeg', 0.8)
 }
-import TransactionsTable from '@/components/TransactionsTable'
 
 // Reduce y convierte una imagen a data URL JPEG (para no subir fotos pesadas)
 function fileToScaledDataURL(file: File, maxDim = 1100, quality = 0.7): Promise<string> {
@@ -67,11 +86,28 @@ function fileToScaledDataURL(file: File, maxDim = 1100, quality = 0.7): Promise<
   })
 }
 
+// Genera un rango de páginas compacto para la paginación
+function getPaginationRange(current: number, total: number) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total]
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total]
+}
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   
+  // Mes seleccionado (YYYY-MM o 'all')
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
+
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
@@ -82,8 +118,8 @@ export default function TransactionsPage() {
   // Filtros avanzados colapsables
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Vista: lista o tabla (persistida)
-  const [viewMode, setViewMode] = useState<'list' | 'table'>('list')
+  // Vista: categorías (default), lista o tabla
+  const [viewMode, setViewMode] = useState<'categories' | 'list' | 'table'>('categories')
 
   // Estado de modales
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -91,6 +127,7 @@ export default function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null)
   const [aiNewCategory, setAiNewCategory] = useState<{ name: string; parent: string } | null>(null)
+  
   // Formulario de añadir (controlado, para poder prellenar al escanear)
   const [formType, setFormType] = useState<'income' | 'expense'>('expense')
   const [formCategory, setFormCategory] = useState('')
@@ -99,15 +136,24 @@ export default function TransactionsPage() {
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
   const [formItems, setFormItems] = useState<TransactionItem[]>([])
   const [scanning, setScanning] = useState(false)
+
   // IA: lenguaje natural + sugerencia de categoría
   const [nlText, setNlText] = useState('')
   const [nlLoading, setNlLoading] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
   const [listening, setListening] = useState(false)
+
   // Fila expandida en la lista (para ver el detalle)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const getCategoryDisplayName = (catId: string) => {
+  // Acordeones de categorías expandidos
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(25)
+
+  const getCategoryDisplayName = useCallback((catId: string) => {
     const c = categories.find((cat) => cat.id === catId)
     if (!c) return 'Sin categoría'
     if (c.parent_id) {
@@ -115,11 +161,7 @@ export default function TransactionsPage() {
       if (parent) return `${parent.name} / ${c.name}`
     }
     return c.name
-  }
-
-  // Paginación
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  }, [categories])
 
   const loadData = async () => {
     try {
@@ -127,6 +169,15 @@ export default function TransactionsPage() {
       const cats = await LocalDB.getCategories()
       setTransactions(txs)
       setCategories(cats)
+
+      // Si no hay mes seleccionado, seleccionar el mes de la transacción más reciente o el mes actual
+      if (txs.length > 0) {
+        const latestDate = txs[0].date
+        const latestMonth = latestDate ? latestDate.slice(0, 7) : new Date().toISOString().slice(0, 7)
+        setSelectedMonth((prev) => prev || latestMonth)
+      } else {
+        setSelectedMonth((prev) => prev || new Date().toISOString().slice(0, 7))
+      }
     } catch (e) {
       console.error('Error cargando transacciones', e)
     } finally {
@@ -141,66 +192,169 @@ export default function TransactionsPage() {
   }, [])
 
   useEffect(() => {
-    if (!loading && categories.length > 0) {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('add') === 'true') {
-        openAddModal()
-        const newUrl = window.location.pathname
-        window.history.replaceState({}, '', newUrl)
-      }
-    }
-  }, [loading, categories])
-
-  useEffect(() => {
-    const handleOpenAdd = () => {
-      if (categories.length > 0) {
-        openAddModal()
-      }
-    }
-    window.addEventListener('finanzas_open_add_transaction', handleOpenAdd)
-    return () => window.removeEventListener('finanzas_open_add_transaction', handleOpenAdd)
-  }, [categories])
-
-  useEffect(() => {
     const v = localStorage.getItem('tx_view')
-    if (v === 'table' || v === 'list') setViewMode(v)
+    if (v === 'categories' || v === 'table' || v === 'list') setViewMode(v)
   }, [])
 
-  const changeView = (v: 'list' | 'table') => {
+  const changeView = (v: 'categories' | 'list' | 'table') => {
     setViewMode(v)
     try { localStorage.setItem('tx_view', v) } catch {}
   }
 
-  // Filtrar transacciones (el filtro por categoría padre incluye sus subcategorías)
-  const filterCategoryIds = categoryFilter === 'all'
-    ? null
-    : new Set([categoryFilter, ...categories.filter((c) => c.parent_id === categoryFilter).map((c) => c.id)])
-  const filteredTransactions = transactions
-    .filter((tx) => {
-      const matchesSearch = tx.description.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesType = typeFilter === 'all' || tx.type === typeFilter
-      const matchesCategory = !filterCategoryIds || filterCategoryIds.has(tx.category_id)
-      
-      let matchesStartDate = true
-      if (startDate) {
-        matchesStartDate = new Date(tx.date) >= new Date(startDate)
+  // Lista de meses disponibles ordenada descendentemente
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>()
+    transactions.forEach(t => {
+      if (t.date && t.date.length >= 7) {
+        set.add(t.date.slice(0, 7))
       }
-      
-      let matchesEndDate = true
-      if (endDate) {
-        matchesEndDate = new Date(tx.date) <= new Date(endDate)
-      }
-
-      return matchesSearch && matchesType && matchesCategory && matchesStartDate && matchesEndDate
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    const list = Array.from(set).sort((a, b) => b.localeCompare(a))
+    // Asegurar que el mes actual esté en la lista si no tiene transacciones
+    const currentCalMonth = new Date().toISOString().slice(0, 7)
+    if (!set.has(currentCalMonth)) {
+      list.unshift(currentCalMonth)
+      list.sort((a, b) => b.localeCompare(a))
+    }
+    return list
+  }, [transactions])
 
-  // Paginación de transacciones filtradas
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
+  // Navegación rápida de mes anterior / siguiente
+  const handlePrevMonth = () => {
+    if (!selectedMonth || selectedMonth === 'all') {
+      if (availableMonths.length > 0) setSelectedMonth(availableMonths[0])
+      return
+    }
+    const idx = availableMonths.indexOf(selectedMonth)
+    if (idx !== -1 && idx < availableMonths.length - 1) {
+      setSelectedMonth(availableMonths[idx + 1])
+      setCurrentPage(1)
+    } else {
+      // Calcular mes previo algebraicamente si no está en la lista
+      const [y, m] = selectedMonth.split('-').map(Number)
+      const d = new Date(y, m - 2, 1)
+      const prevYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      setSelectedMonth(prevYm)
+      setCurrentPage(1)
+    }
+  }
+
+  const handleNextMonth = () => {
+    if (!selectedMonth || selectedMonth === 'all') {
+      if (availableMonths.length > 0) setSelectedMonth(availableMonths[0])
+      return
+    }
+    const idx = availableMonths.indexOf(selectedMonth)
+    if (idx > 0) {
+      setSelectedMonth(availableMonths[idx - 1])
+      setCurrentPage(1)
+    } else {
+      // Calcular mes siguiente algebraicamente
+      const [y, m] = selectedMonth.split('-').map(Number)
+      const d = new Date(y, m, 1)
+      const nextYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      setSelectedMonth(nextYm)
+      setCurrentPage(1)
+    }
+  }
+
+  const filteredTransactions = useMemo(() => {
+    const filterCategoryIds = categoryFilter === 'all'
+      ? null
+      : new Set([categoryFilter, ...categories.filter((c) => c.parent_id === categoryFilter).map((c) => c.id)])
+
+    return transactions
+      .filter((tx) => {
+        // Filtro por mes
+        if (selectedMonth && selectedMonth !== 'all') {
+          if (!tx.date.startsWith(selectedMonth)) return false
+        }
+
+        const matchesSearch = !searchTerm || tx.description.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesType = typeFilter === 'all' || tx.type === typeFilter
+        const matchesCategory = !filterCategoryIds || filterCategoryIds.has(tx.category_id)
+        
+        let matchesStartDate = true
+        if (startDate) {
+          matchesStartDate = new Date(tx.date) >= new Date(startDate)
+        }
+        
+        let matchesEndDate = true
+        if (endDate) {
+          matchesEndDate = new Date(tx.date) <= new Date(endDate)
+        }
+
+        return matchesSearch && matchesType && matchesCategory && matchesStartDate && matchesEndDate
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [transactions, selectedMonth, searchTerm, typeFilter, categoryFilter, categories, startDate, endDate])
+
+  // Estadísticas del mes / periodo seleccionado
+  const monthStats = useMemo(() => {
+    let income = 0
+    let expense = 0
+    filteredTransactions.forEach(t => {
+      const amt = Math.abs(t.amount)
+      if (t.type === 'income') income += amt
+      else expense += amt
+    })
+    return {
+      income,
+      expense,
+      balance: income - expense,
+      count: filteredTransactions.length
+    }
+  }, [filteredTransactions])
+
+  // Agrupación por categorías (para la vista "Por Categorías")
+  const categorizedData = useMemo(() => {
+    type CategoryGroup = {
+      categoryId: string
+      categoryName: string
+      category: Category | null
+      type: 'income' | 'expense'
+      totalAmount: number
+      transactions: Transaction[]
+    }
+
+    const groupMap = new Map<string, CategoryGroup>()
+
+    filteredTransactions.forEach((tx) => {
+      const catId = tx.category_id || 'uncategorized'
+      const cat = categories.find((c) => c.id === tx.category_id) || null
+      const catName = getCategoryDisplayName(tx.category_id)
+
+      if (!groupMap.has(catId)) {
+        groupMap.set(catId, {
+          categoryId: catId,
+          categoryName: catName,
+          category: cat,
+          type: tx.type,
+          totalAmount: 0,
+          transactions: []
+        })
+      }
+
+      const grp = groupMap.get(catId)!
+      grp.totalAmount += Math.abs(tx.amount)
+      grp.transactions.push(tx)
+    })
+
+    const allGroups = Array.from(groupMap.values())
+    allGroups.sort((a, b) => b.totalAmount - a.totalAmount)
+
+    const expenseGroups = allGroups.filter(g => g.type === 'expense')
+    const incomeGroups = allGroups.filter(g => g.type === 'income')
+
+    return { expenseGroups, incomeGroups, allGroups }
+  }, [filteredTransactions, categories, getCategoryDisplayName])
+
+  // Paginación de transacciones para vista lista
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage) || 1
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage)
 
-  // Categorías agrupadas por tipo
+  // Categorías agrupadas por tipo para modales
   const incomeCats = categories.filter((c) => c.type === 'income')
   const expenseCats = categories.filter((c) => c.type === 'expense')
   const formCats = formType === 'income' ? incomeCats : expenseCats
@@ -211,11 +365,42 @@ export default function TransactionsPage() {
     setFormCategory(expenseCats[0]?.id || '')
     setFormDesc('')
     setFormAmount('')
-    setFormDate(new Date().toISOString().slice(0, 10))
+    // Default a la fecha del mes seleccionado o hoy
+    const now = new Date()
+    const curYm = now.toISOString().slice(0, 7)
+    if (selectedMonth && selectedMonth !== 'all' && selectedMonth !== curYm) {
+      setFormDate(`${selectedMonth}-01`)
+    } else {
+      setFormDate(now.toISOString().slice(0, 10))
+    }
     setFormItems([])
     setNlText('')
     setAiNewCategory(null)
     setIsAddModalOpen(true)
+  }
+
+  // Toggle de acordeón de categorías
+  const toggleCategoryAccordion = (catId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [catId]: prev[catId] === undefined ? false : !prev[catId]
+    }))
+  }
+
+  const expandAllCategories = () => {
+    const nextState: Record<string, boolean> = {}
+    categorizedData.allGroups.forEach(g => {
+      nextState[g.categoryId] = true
+    })
+    setExpandedCategories(nextState)
+  }
+
+  const collapseAllCategories = () => {
+    const nextState: Record<string, boolean> = {}
+    categorizedData.allGroups.forEach(g => {
+      nextState[g.categoryId] = false
+    })
+    setExpandedCategories(nextState)
   }
 
   // --- Editor de ítems (detalle) ---
@@ -229,32 +414,7 @@ export default function TransactionsPage() {
       .filter((it) => it.description || it.amount)
   const itemsSum = formItems.reduce((s, it) => s + (Number(it.amount) || 0), 0)
 
-  // Escanear recibo: sube la foto, prellena el formulario y abre el modal
-  // Dictado por voz (Web Speech API del navegador, gratis)
-  const startDictation = () => {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const w = window as any
-    const SR = w.SpeechRecognition || w.webkitSpeechRecognition
-    if (!SR) {
-      toast.error('Tu navegador no soporta dictado por voz')
-      return
-    }
-    const rec = new SR()
-    rec.lang = 'es-ES'
-    rec.interimResults = false
-    rec.maxAlternatives = 1
-    setListening(true)
-    rec.onresult = (ev: any) => {
-      const t = ev.results[0][0].transcript
-      setNlText(t)
-      handleInterpret(t)
-    }
-    rec.onerror = () => { toast.error('No se pudo captar el audio'); setListening(false) }
-    rec.onend = () => setListening(false)
-    rec.start()
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-  }
-
+  // Escanear recibo
   const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -289,7 +449,6 @@ export default function TransactionsPage() {
         setAiNewCategory(data.newCategory)
         setFormCategory('')
       } else {
-        // El modelo elige de la lista real -> match exacto por nombre
         const sug = String(data.category || '').toLowerCase().trim()
         const match =
           expenseCats.find((c) => c.name.toLowerCase() === sug) ||
@@ -305,6 +464,30 @@ export default function TransactionsPage() {
     }
   }
 
+  const startDictation = () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const w = window as any
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition
+    if (!SR) {
+      toast.error('Tu navegador no soporta dictado por voz')
+      return
+    }
+    const rec = new SR()
+    rec.lang = 'es-ES'
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    setListening(true)
+    rec.onresult = (ev: any) => {
+      const t = ev.results[0][0].transcript
+      setNlText(t)
+      handleInterpret(t)
+    }
+    rec.onerror = () => { toast.error('No se pudo captar el audio'); setListening(false) }
+    rec.onend = () => setListening(false)
+    rec.start()
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  }
+
   const changeFormType = (t: 'income' | 'expense') => {
     setFormType(t)
     const list = t === 'income' ? incomeCats : expenseCats
@@ -313,7 +496,6 @@ export default function TransactionsPage() {
 
   const today = () => new Date().toISOString().slice(0, 10)
 
-  // #4 Registro por lenguaje natural (texto o dictado)
   const handleInterpret = async (textArg?: string) => {
     const text = (textArg ?? nlText).trim()
     if (!text) return
@@ -350,7 +532,6 @@ export default function TransactionsPage() {
     }
   }
 
-  // #3 Sugerir categoría desde la descripción
   const handleSuggestCategory = async () => {
     if (!formDesc.trim()) { toast.error('Escribe una descripción primero'); return }
     setSuggesting(true)
@@ -385,7 +566,6 @@ export default function TransactionsPage() {
     }
   }
 
-  // Restablecer filtros
   const handleResetFilters = () => {
     setSearchTerm('')
     setTypeFilter('all')
@@ -398,53 +578,29 @@ export default function TransactionsPage() {
   // --- CRUD ACTIONS ---
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const amount = parseFloat(formAmount)
-    if (!formDesc.trim() || isNaN(amount) || amount <= 0 || (!formCategory && !aiNewCategory) || !formDate) {
-      toast.error('Completa descripción, monto, categoría y fecha')
+    if (!formCategory) {
+      toast.error('Debes seleccionar o crear una categoría')
       return
     }
-    const items = cleanItems()
+    const amountVal = parseFloat(formAmount)
+    if (isNaN(amountVal) || amountVal <= 0) {
+      toast.error('Monto inválido')
+      return
+    }
     try {
-      let finalCatId = formCategory
-      if (aiNewCategory) {
-        // Automatically create and set category if user didn't hit "crear y asignar" but tries to save
-        const { name, parent } = aiNewCategory
-        let parentId: string | null = null
-        const existingParent = categories.find(
-          (c) => c.name.toLowerCase() === parent.toLowerCase() && c.type === formType
-        )
-        if (existingParent) {
-          parentId = existingParent.id
-        } else {
-          const newParent = await LocalDB.addCategory(parent, formType)
-          parentId = newParent.id
-        }
-
-        const updatedCats = await LocalDB.getCategories()
-        const existingChild = updatedCats.find(
-          (c) => c.name.toLowerCase() === name.toLowerCase() && c.parent_id === parentId && c.type === formType
-        )
-        if (existingChild) {
-          finalCatId = existingChild.id
-        } else {
-          const newChild = await LocalDB.addCategory(name, formType, parentId)
-          finalCatId = newChild.id
-        }
-        await loadData()
-      }
-
       await LocalDB.addTransaction({
         description: formDesc.trim(),
-        amount,
+        amount: amountVal,
         type: formType,
-        category_id: finalCatId,
+        category_id: formCategory,
         date: formDate,
-        details: items.length ? items : null,
+        details: cleanItems(),
       })
       setIsAddModalOpen(false)
-      toast.success('Movimiento registrado con éxito')
+      toast.success('Transacción añadida')
+      await loadData()
     } catch {
-      toast.error('Error al guardar movimiento')
+      toast.error('Error al guardar la transacción')
     }
   }
 
@@ -452,145 +608,75 @@ export default function TransactionsPage() {
     setEditingTransaction(tx)
     setFormType(tx.type)
     setFormCategory(tx.category_id)
-    setFormItems(tx.details ? tx.details.map((it) => ({ ...it })) : [])
+    setFormDesc(tx.description)
+    setFormAmount(String(tx.amount))
+    setFormDate(tx.date)
+    setFormItems(tx.details ? [...tx.details] : [])
     setAiNewCategory(null)
     setIsEditModalOpen(true)
-  }
-
-  const handleCreateAiCategory = async () => {
-    if (!aiNewCategory) return
-    const { name, parent } = aiNewCategory
-    const loadToast = toast.loading(`Creando categoría "${parent} / ${name}"...`)
-    try {
-      let parentId: string | null = null
-      const existingParent = categories.find(
-        (c) => c.name.toLowerCase() === parent.toLowerCase() && c.type === formType
-      )
-      if (existingParent) {
-        parentId = existingParent.id
-      } else {
-        const newParent = await LocalDB.addCategory(parent, formType)
-        parentId = newParent.id
-      }
-
-      const updatedCats = await LocalDB.getCategories()
-      const existingChild = updatedCats.find(
-        (c) => c.name.toLowerCase() === name.toLowerCase() && c.parent_id === parentId && c.type === formType
-      )
-      let childId: string | null = null
-      if (existingChild) {
-        childId = existingChild.id
-      } else {
-        const newChild = await LocalDB.addCategory(name, formType, parentId)
-        childId = newChild.id
-      }
-
-      await loadData()
-      setFormCategory(childId)
-      setAiNewCategory(null)
-      toast.dismiss(loadToast)
-      toast.success(`Categoría "${parent} / ${name}" creada y seleccionada`)
-    } catch (err) {
-      console.error(err)
-      toast.dismiss(loadToast)
-      toast.error('Error al crear la categoría sugerida')
-    }
   }
 
   const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!editingTransaction) return
     const formData = new FormData(e.currentTarget)
-    
-    const amountStr = formData.get('amount') as string
-    const category_id = formData.get('category_id') as string
-    const type = formData.get('type') as 'income' | 'expense'
-    const date = formData.get('date') as string
-    const description = formData.get('description') as string
-
-    if (!amountStr || (!category_id && !aiNewCategory) || !type || !date || !description) return
-
-    const items = cleanItems()
+    const amountVal = parseFloat(formData.get('amount') as string)
+    if (isNaN(amountVal) || amountVal <= 0) {
+      toast.error('Monto inválido')
+      return
+    }
     try {
-      let finalCatId = category_id
-      if (aiNewCategory) {
-        const { name, parent } = aiNewCategory
-        let parentId: string | null = null
-        const existingParent = categories.find(
-          (c) => c.name.toLowerCase() === parent.toLowerCase() && c.type === type
-        )
-        if (existingParent) {
-          parentId = existingParent.id
-        } else {
-          const newParent = await LocalDB.addCategory(parent, type)
-          parentId = newParent.id
-        }
-
-        const updatedCats = await LocalDB.getCategories()
-        const existingChild = updatedCats.find(
-          (c) => c.name.toLowerCase() === name.toLowerCase() && c.parent_id === parentId && c.type === type
-        )
-        if (existingChild) {
-          finalCatId = existingChild.id
-        } else {
-          const newChild = await LocalDB.addCategory(name, type, parentId)
-          finalCatId = newChild.id
-        }
-        await loadData()
-      }
-
       await LocalDB.updateTransaction(editingTransaction.id, {
-        description,
-        amount: parseFloat(amountStr),
-        type,
-        category_id: finalCatId,
-        date,
-        details: items.length ? items : null,
+        description: (formData.get('description') as string).trim(),
+        amount: amountVal,
+        type: formType,
+        category_id: formCategory,
+        date: formData.get('date') as string,
+        details: cleanItems(),
       })
       setIsEditModalOpen(false)
       setEditingTransaction(null)
-      toast.success('Movimiento actualizado con éxito')
+      toast.success('Transacción actualizada')
+      await loadData()
     } catch {
-      toast.error('Error al actualizar movimiento')
+      toast.error('Error al actualizar la transacción')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('¿Estás seguro de que deseas eliminar esta transacción?')) {
-      try {
-        await LocalDB.deleteTransaction(id)
-        toast.success('Transacción eliminada')
-      } catch {
-        toast.error('Error al eliminar transacción')
-      }
+    if (!confirm('¿Seguro que deseas eliminar esta transacción?')) return
+    try {
+      await LocalDB.deleteTransaction(id)
+      toast.success('Transacción eliminada')
+      await loadData()
+    } catch {
+      toast.error('Error al eliminar la transacción')
     }
   }
 
-  // --- EXPORTAR CSV ---
   const handleExportCSV = () => {
-    const headers = ['Fecha', 'Descripcion', 'Categoria', 'Tipo', 'Monto']
-    const rows = filteredTransactions.map((tx) => {
-      const cat = categories.find((c) => c.id === tx.category_id)
-      return [
-        tx.date,
-        `"${tx.description.replace(/"/g, '""')}"`,
-        cat ? cat.name : 'Sin Categoria',
-        tx.type === 'income' ? 'Ingreso' : 'Gasto',
-        tx.amount
-      ]
-    })
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
-
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `transacciones_${new Date().toISOString().slice(0,10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    if (filteredTransactions.length === 0) {
+      toast.error('No hay transacciones para exportar')
+      return
+    }
+    const headers = ['Fecha', 'Descripción', 'Categoría', 'Tipo', 'Monto', 'Detalles']
+    const rows = filteredTransactions.map((tx) => [
+      tx.date,
+      `"${tx.description.replace(/"/g, '""')}"`,
+      `"${getCategoryDisplayName(tx.category_id).replace(/"/g, '""')}"`,
+      tx.type === 'income' ? 'Ingreso' : 'Gasto',
+      tx.amount,
+      `"${(tx.details || []).map((i) => `${i.description}: ${i.amount}`).join('; ').replace(/"/g, '""')}"`,
+    ])
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `transacciones_${selectedMonth || 'todas'}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('CSV exportado con éxito')
   }
 
   if (loading) {
@@ -604,7 +690,6 @@ export default function TransactionsPage() {
     )
   }
 
-  // Editor de detalle (ítems) reutilizado en ambos modales
   const itemsEditor = (
     <div className="border-t border-slate-800 pt-4">
       <div className="flex items-center justify-between mb-2">
@@ -647,27 +732,30 @@ export default function TransactionsPage() {
   )
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Título */}
+    <div className="space-y-6 animate-fadeIn pb-8 max-w-6xl mx-auto">
+      {/* CABECERA PRINCIPAL */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
             <img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" />
-            Historial de Transacciones
+            Movimientos y Transacciones
           </h1>
-          <p className="text-slate-400 text-xs mt-1">Busca, filtra, exporta y gestiona tus ingresos y gastos.</p>
+          <p className="text-slate-400 text-xs mt-1">
+            Visualiza tus finanzas organizadas por meses y categorías jerárquicas.
+          </p>
         </div>
+
         <div className="flex items-center gap-2.5">
           <button
             onClick={handleExportCSV}
             disabled={filteredTransactions.length === 0}
-            className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2.5 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+            className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
           >
             <FiDownload className="w-4 h-4" />
             Exportar CSV
           </button>
 
-          <label className={`flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2.5 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer ${scanning ? 'opacity-60 pointer-events-none' : ''}`}>
+          <label className={`flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer ${scanning ? 'opacity-60 pointer-events-none' : ''}`}>
             {scanning ? (
               <svg className="animate-spin h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -682,28 +770,152 @@ export default function TransactionsPage() {
 
           <button
             onClick={openAddModal}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer"
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer"
           >
             <FiPlus className="w-4 h-4" />
-            Nueva Transacción
+            Nuevo Movimiento
           </button>
         </div>
       </div>
 
-      {/* SECCIÓN DE FILTROS */}
+      {/* NAVEGADOR DE MESES Y RESUMEN FINANCIERO */}
+      <div className="bg-slate-900 border border-slate-800 rounded-md p-4 shadow-sm space-y-4">
+        {/* Selector de Mes */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevMonth}
+              title="Mes anterior"
+              className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md transition-all cursor-pointer"
+            >
+              <FiChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5">
+              <FiCalendar className="w-4 h-4 text-emerald-400" />
+              <select
+                value={selectedMonth}
+                onChange={(e) => {
+                  setSelectedMonth(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="bg-transparent text-slate-100 font-bold text-xs outline-none cursor-pointer pr-2"
+              >
+                {availableMonths.map(ym => (
+                  <option key={ym} value={ym} className="bg-slate-950 text-slate-200">
+                    {formatMonthName(ym)}
+                  </option>
+                ))}
+                <option value="all" className="bg-slate-950 text-slate-200">
+                  -- Todos los Meses ({transactions.length} movs) --
+                </option>
+              </select>
+            </div>
+
+            <button
+              onClick={handleNextMonth}
+              title="Mes siguiente"
+              className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-md transition-all cursor-pointer"
+            >
+              <FiChevronRight className="w-4 h-4" />
+            </button>
+
+            {selectedMonth !== new Date().toISOString().slice(0, 7) && selectedMonth !== 'all' && (
+              <button
+                onClick={() => {
+                  setSelectedMonth(new Date().toISOString().slice(0, 7))
+                  setCurrentPage(1)
+                }}
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 px-2 py-1 bg-emerald-500/10 rounded border border-emerald-500/20 transition-all cursor-pointer"
+              >
+                Mes Actual
+              </button>
+            )}
+          </div>
+
+          {/* Selector de Modo de Visualización */}
+          <div className="inline-flex bg-slate-950 border border-slate-800 rounded-md p-0.5 self-start sm:self-auto">
+            <button
+              onClick={() => changeView('categories')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'categories' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FiFolder className="w-3.5 h-3.5" /> Por Categorías
+            </button>
+            <button
+              onClick={() => changeView('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'list' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FiList className="w-3.5 h-3.5" /> Lista
+            </button>
+            <button
+              onClick={() => changeView('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'table' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FiColumns className="w-3.5 h-3.5" /> Tabla
+            </button>
+          </div>
+        </div>
+
+        {/* Resumen del Mes Seleccionado */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <FiTrendingUp className="w-3.5 h-3.5 text-emerald-400" /> Ingresos
+            </span>
+            <p className="text-lg font-black text-emerald-400 mt-1">
+              +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <FiTrendingDown className="w-3.5 h-3.5 text-rose-400" /> Gastos
+            </span>
+            <p className="text-lg font-black text-rose-400 mt-1">
+              -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <FiDollarSign className="w-3.5 h-3.5 text-slate-400" /> Balance Neto
+            </span>
+            <p className={`text-lg font-black mt-1 ${monthStats.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {monthStats.balance >= 0 ? '+' : '-'}${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <FiGrid className="w-3.5 h-3.5 text-slate-400" /> Movimientos
+            </span>
+            <p className="text-lg font-black text-slate-200 mt-1">
+              {monthStats.count} <span className="text-xs font-normal text-slate-500">registros</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* BARRA DE BÚSQUEDA Y FILTROS ADICIONALES */}
       <div className="bg-slate-900 border border-slate-800 rounded-md p-4 shadow-sm space-y-3">
-        {/* Barra: búsqueda + toggle avanzados */}
         <div className="flex flex-col sm:flex-row gap-2.5">
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Buscar por descripción..."
+              placeholder="Buscar por descripción o concepto..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="w-full bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-md py-2 px-3 pl-8 text-xs focus:border-emerald-500 outline-none transition-all"
             />
             <FiSearch className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
           </div>
+
           <button
             onClick={() => setFiltersOpen((v) => !v)}
             className={`flex items-center justify-center gap-2 px-3.5 py-2 rounded-md text-xs font-bold border transition-all cursor-pointer ${
@@ -719,6 +931,7 @@ export default function TransactionsPage() {
             )}
             <FiChevronDown className={`w-3.5 h-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
           </button>
+
           {activeFilterCount > 0 && (
             <button
               onClick={handleResetFilters}
@@ -729,34 +942,34 @@ export default function TransactionsPage() {
           )}
         </div>
 
-        {/* Avanzados (colapsable) */}
+        {/* Filtros avanzados colapsables */}
         {filtersOpen && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 animate-fadeIn">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80 animate-fadeIn">
             <div>
-              <label className="block text-[10px] font-semibold text-slate-400 mb-1.5">Tipo</label>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Tipo</label>
               <select
                 value={typeFilter}
                 onChange={(e) => { setTypeFilter(e.target.value as 'all' | 'income' | 'expense'); setCurrentPage(1); }}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none cursor-pointer"
               >
-                <option value="all">Todos los Movimientos</option>
-                <option value="income">Ingresos (+)</option>
-                <option value="expense">Gastos (-)</option>
+                <option value="all">Todos los Tipos</option>
+                <option value="income">Solo Ingresos (+)</option>
+                <option value="expense">Solo Gastos (-)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-[10px] font-semibold text-slate-400 mb-1.5">Categoría</label>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Categoría</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none cursor-pointer"
               >
                 <option value="all">Todas las Categorías</option>
                 {incomeCats.length > 0 && (
                   <optgroup label="Ingresos">
                     {buildCategoryTree(incomeCats).map((node) => [
-                      <option key={node.id} value={node.id}>{node.name}{node.children.length > 0 ? ' (incluye subcategorías)' : ''}</option>,
+                      <option key={node.id} value={node.id}>{node.name}</option>,
                       ...node.children.map((child) => (
                         <option key={child.id} value={child.id}>&nbsp;&nbsp;└ {child.name}</option>
                       )),
@@ -766,7 +979,7 @@ export default function TransactionsPage() {
                 {expenseCats.length > 0 && (
                   <optgroup label="Gastos">
                     {buildCategoryTree(expenseCats).map((node) => [
-                      <option key={node.id} value={node.id}>{node.name}{node.children.length > 0 ? ' (incluye subcategorías)' : ''}</option>,
+                      <option key={node.id} value={node.id}>{node.name}</option>,
                       ...node.children.map((child) => (
                         <option key={child.id} value={child.id}>&nbsp;&nbsp;└ {child.name}</option>
                       )),
@@ -777,59 +990,307 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-semibold text-slate-400 mb-1.5">Desde</label>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Desde Fecha Específica</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none cursor-pointer"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-semibold text-slate-400 mb-1.5">Hasta</label>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Hasta Fecha</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none cursor-pointer"
               />
             </div>
           </div>
         )}
       </div>
 
-      {/* LISTADO DE TRANSACCIONES */}
-      <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
-        {/* Toggle de vista */}
-        <div className="flex justify-end mb-3">
-          <div className="inline-flex bg-slate-950 border border-slate-800 rounded-md p-0.5">
+      {/* CONTENIDO PRINCIPAL SEGÚN LA VISTA SELECCIONADA */}
+      {filteredTransactions.length === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-12 text-center text-slate-500 space-y-3">
+          <FiFolder className="w-10 h-10 mx-auto text-slate-600 mb-2" />
+          <p className="text-sm font-semibold text-slate-300">No hay movimientos en {formatMonthName(selectedMonth)}.</p>
+          <p className="text-xs text-slate-500">Prueba cambiando de mes o ajustando los filtros de búsqueda.</p>
+          <div className="pt-2 flex justify-center gap-2">
             <button
-              onClick={() => changeView('list')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}
+              onClick={handleResetFilters}
+              className="px-3.5 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-xs font-bold text-slate-300 rounded-md transition-all cursor-pointer"
             >
-              <FiList className="w-3.5 h-3.5" /> Lista
+              Restablecer Filtros
             </button>
             <button
-              onClick={() => changeView('table')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${viewMode === 'table' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}
+              onClick={openAddModal}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white rounded-md transition-all cursor-pointer"
             >
-              <FiColumns className="w-3.5 h-3.5" /> Tabla
+              + Agregar Movimiento
             </button>
           </div>
         </div>
-
-        {filteredTransactions.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <p className="text-xs font-semibold">No se encontraron movimientos.</p>
-            <button
-              onClick={handleResetFilters}
-              className="mt-3 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-md text-[10px] font-bold text-emerald-500 hover:bg-slate-800 transition-all cursor-pointer"
-            >
-              Limpiar Filtros
-            </button>
+      ) : viewMode === 'categories' ? (
+        /* ================= VISTA POR CATEGORÍAS ================= */
+        <div className="space-y-6">
+          {/* Controles de expansión masiva */}
+          <div className="flex justify-between items-center px-1">
+            <span className="text-xs font-bold text-slate-400">
+              Categorías activas en este periodo ({categorizedData.allGroups.length})
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={expandAllCategories}
+                className="text-[10px] font-bold text-slate-400 hover:text-emerald-400 px-2 py-1 bg-slate-900 border border-slate-800 rounded transition-colors cursor-pointer"
+              >
+                Expandir Todo
+              </button>
+              <button
+                type="button"
+                onClick={collapseAllCategories}
+                className="text-[10px] font-bold text-slate-400 hover:text-slate-200 px-2 py-1 bg-slate-900 border border-slate-800 rounded transition-colors cursor-pointer"
+              >
+                Colapsar Todo
+              </button>
+            </div>
           </div>
-        ) : viewMode === 'table' ? (
+
+          {/* GASTOS POR CATEGORÍA */}
+          {categorizedData.expenseGroups.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-rose-500/20 pb-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                <h2 className="text-xs font-black uppercase tracking-wider text-rose-400">
+                  Gastos por Categoría ({categorizedData.expenseGroups.length})
+                </h2>
+                <span className="ml-auto text-xs font-black text-rose-400">
+                  Total: -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {categorizedData.expenseGroups.map((group) => {
+                  const isExpanded = expandedCategories[group.categoryId] !== false // Default abierto
+                  const percentage = monthStats.expense > 0 ? (group.totalAmount / monthStats.expense) * 100 : 0
+
+                  return (
+                    <div key={group.categoryId} className="bg-slate-900 border border-slate-800 rounded-md overflow-hidden shadow-sm transition-all">
+                      {/* Cabecera del Acordeón de Categoría */}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategoryAccordion(group.categoryId)}
+                        className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
+                            <span className="text-[10px] bg-rose-500/10 text-rose-300 font-semibold px-2 py-0.2 rounded-full border border-rose-500/20">
+                              {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+
+                          {/* Barra de progreso / porcentaje de gasto */}
+                          <div className="flex items-center gap-2 mt-1.5 max-w-xs">
+                            <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                              <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className="text-sm font-black text-rose-400">
+                            -${group.totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800">
+                            {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Lista de Transacciones de esta Categoría */}
+                      {isExpanded && (
+                        <div className="border-t border-slate-800 bg-slate-950/40 divide-y divide-slate-850/60">
+                          {group.transactions.map((tx) => {
+                            const hasDetail = !!tx.details && tx.details.length > 0
+                            return (
+                              <div key={tx.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition-colors group">
+                                <div 
+                                  onClick={() => setSelectedDetailTx(tx)}
+                                  className="min-w-0 flex-1 cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-slate-200 truncate">{tx.description}</span>
+                                    {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
+                                      <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">
+                                        {tx.details![0].description}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                                    {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                  <span 
+                                    onClick={() => setSelectedDetailTx(tx)}
+                                    className="text-xs font-bold text-rose-400 cursor-pointer"
+                                  >
+                                    -${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                  </span>
+
+                                  <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditOpen(tx)}
+                                      title="Editar"
+                                      className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-all cursor-pointer"
+                                    >
+                                      <FiEdit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDelete(tx.id)}
+                                      title="Eliminar"
+                                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-all cursor-pointer"
+                                    >
+                                      <FiTrash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* INGRESOS POR CATEGORÍA */}
+          {categorizedData.incomeGroups.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2 border-b border-emerald-500/20 pb-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <h2 className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                  Ingresos por Categoría ({categorizedData.incomeGroups.length})
+                </h2>
+                <span className="ml-auto text-xs font-black text-emerald-400">
+                  Total: +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {categorizedData.incomeGroups.map((group) => {
+                  const isExpanded = expandedCategories[group.categoryId] !== false // Default abierto
+                  const percentage = monthStats.income > 0 ? (group.totalAmount / monthStats.income) * 100 : 0
+
+                  return (
+                    <div key={group.categoryId} className="bg-slate-900 border border-slate-800 rounded-md overflow-hidden shadow-sm transition-all">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategoryAccordion(group.categoryId)}
+                        className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-semibold px-2 py-0.2 rounded-full border border-emerald-500/20">
+                              {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-1.5 max-w-xs">
+                            <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                              <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className="text-sm font-black text-emerald-400">
+                            +${group.totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800">
+                            {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-slate-800 bg-slate-950/40 divide-y divide-slate-850/60">
+                          {group.transactions.map((tx) => {
+                            const hasDetail = !!tx.details && tx.details.length > 0
+                            return (
+                              <div key={tx.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition-colors group">
+                                <div 
+                                  onClick={() => setSelectedDetailTx(tx)}
+                                  className="min-w-0 flex-1 cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-slate-200 truncate">{tx.description}</span>
+                                    {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
+                                      <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">
+                                        {tx.details![0].description}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                                    {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                  <span 
+                                    onClick={() => setSelectedDetailTx(tx)}
+                                    className="text-xs font-bold text-emerald-400 cursor-pointer"
+                                  >
+                                    +${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                  </span>
+
+                                  <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditOpen(tx)}
+                                      title="Editar"
+                                      className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-all cursor-pointer"
+                                    >
+                                      <FiEdit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDelete(tx.id)}
+                                      title="Eliminar"
+                                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-all cursor-pointer"
+                                    >
+                                      <FiTrash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : viewMode === 'table' ? (
+        /* ================= VISTA TABLA ================= */
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 shadow-sm">
           <TransactionsTable
             transactions={filteredTransactions}
             categories={categories}
@@ -837,53 +1298,57 @@ export default function TransactionsPage() {
             onDelete={handleDelete}
             onRowClick={setSelectedDetailTx}
           />
-        ) : (
+        </div>
+      ) : (
+        /* ================= VISTA LISTA CRONOLÓGICA ================= */
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm space-y-4">
           <div className="divide-y divide-slate-800/70">
             {paginatedTransactions.map((tx) => {
               const isIncome = tx.type === 'income'
               const Arrow = isIncome ? FiArrowUpRight : FiArrowDownLeft
               const hasDetail = !!tx.details && tx.details.length > 0
               const isExpanded = expandedId === tx.id
+
               return (
                 <div key={tx.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="group flex items-center gap-3">
-                    {/* Icono por tipo */}
                     <span
                       onClick={() => setSelectedDetailTx(tx)}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer ${isIncome ? 'bg-emerald-500/10 text-emerald-450' : 'bg-rose-500/10 text-rose-400'}`}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                        isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}
                     >
                       <Arrow className="w-4 h-4" />
                     </span>
 
-                    {/* Descripción + categoría/fecha */}
                     <div
                       onClick={() => setSelectedDetailTx(tx)}
                       className="min-w-0 flex-1 cursor-pointer text-left"
                     >
-                      <p className="text-sm font-bold text-slate-105 truncate leading-tight">{tx.description}</p>
+                      <p className="text-sm font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
-                        <span className="truncate">{getCategoryDisplayName(tx.category_id)}</span>
+                        <span className="truncate text-slate-400 font-semibold">{getCategoryDisplayName(tx.category_id)}</span>
                         <span className="text-slate-700">•</span>
                         <span className="whitespace-nowrap">
                           {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
-                        {hasDetail && (
-                          <span className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 font-bold">
-                            {tx.details!.length} ítem{tx.details!.length > 1 ? 's' : ''}
+                        {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
+                          <span className="ml-1 inline-flex items-center bg-slate-950 border border-slate-800 px-1.5 py-0.2 rounded text-[9px] text-slate-400">
+                            {tx.details![0].description}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Monto */}
                     <span
                       onClick={() => setSelectedDetailTx(tx)}
-                      className={`text-sm font-extrabold whitespace-nowrap cursor-pointer ${isIncome ? 'text-emerald-450' : 'text-rose-400'}`}
+                      className={`text-sm font-extrabold whitespace-nowrap cursor-pointer ${
+                        isIncome ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
                     >
                       {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                     </span>
 
-                    {/* Acciones */}
                     <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       {hasDetail && (
                         <button
@@ -904,19 +1369,18 @@ export default function TransactionsPage() {
                       <button
                         onClick={() => handleDelete(tx.id)}
                         title="Eliminar"
-                        className="p-1.5 text-slate-500 hover:text-rose-455 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
                       >
                         <FiTrash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Detalle expandido */}
                   {hasDetail && isExpanded && (
                     <div className="mt-2 ml-12 bg-slate-950 border border-slate-800 rounded-md p-3 space-y-1.5">
                       {tx.details!.map((it, i) => (
                         <div key={i} className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-350 truncate pr-3">{it.description || 'Ítem'}</span>
+                          <span className="text-slate-300 truncate pr-3">{it.description || 'Ítem'}</span>
                           <span className="text-slate-400 font-semibold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
                         </div>
                       ))}
@@ -926,49 +1390,70 @@ export default function TransactionsPage() {
               )
             })}
           </div>
-        )}
 
-        {/* Paginación (solo vista lista; la tabla tiene la suya) */}
-        {viewMode === 'list' && totalPages > 1 && (
-          <div className="flex justify-between items-center mt-5 pt-4 border-t border-slate-800">
-            <span className="text-[10px] text-slate-500 font-semibold">
-              Mostrando {startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} de {filteredTransactions.length}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-800 text-slate-300 rounded-md disabled:opacity-40 transition-all cursor-pointer"
+          {/* PAGINACIÓN CORREGIDA E INTELIGENTE */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-800">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>Mostrar</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="bg-slate-950 border border-slate-800 text-slate-300 rounded px-2 py-1 text-xs outline-none cursor-pointer"
               >
-                <FiChevronLeft className="w-4 h-4" />
-              </button>
-              {[...Array(totalPages)].map((_, idx) => {
-                const pageNum = idx + 1
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`w-7 h-7 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
-                      currentPage === pageNum
-                        ? 'bg-emerald-600 text-white font-black shadow-sm'
-                        : 'bg-slate-950 border border-slate-850 hover:bg-slate-850 text-slate-400'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                )
-              })}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="p-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-800 text-slate-300 rounded-md disabled:opacity-40 transition-all cursor-pointer"
-              >
-                <FiChevronRight className="w-4 h-4" />
-              </button>
+                <option value={15}>15 por página</option>
+                <option value={25}>25 por página</option>
+                <option value={50}>50 por página</option>
+                <option value={100}>100 por página</option>
+              </select>
+              <span>(Total {filteredTransactions.length} registros)</span>
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-1.5 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded disabled:opacity-30 transition-all cursor-pointer"
+                >
+                  <FiChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                {getPaginationRange(currentPage, totalPages).map((item, idx) => {
+                  if (item === '...') {
+                    return <span key={`ellipsis-${idx}`} className="px-1.5 text-xs text-slate-600">...</span>
+                  }
+                  const pageNum = Number(item)
+                  const isCur = currentPage === pageNum
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`min-w-7 h-7 px-1.5 rounded text-xs font-bold transition-all cursor-pointer ${
+                        isCur
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded disabled:opacity-30 transition-all cursor-pointer"
+                >
+                  <FiChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* MODAL: AGREGAR TRANSACCIÓN */}
       {isAddModalOpen && (
@@ -976,16 +1461,16 @@ export default function TransactionsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <button
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100"
+              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100 cursor-pointer"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-slate-100 mb-4">Añadir Nueva Transacción</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-4">Añadir Nuevo Movimiento</h2>
 
             <div className="mb-4 bg-slate-950 border border-emerald-500/20 rounded-md p-3">
               <label className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
-                <FiZap className="w-3 h-3" /> Escribir con IA
+                <FiZap className="w-3 h-3" /> Escribir con IA o Voz
               </label>
               <div className="flex gap-2">
                 <button
@@ -1002,7 +1487,7 @@ export default function TransactionsPage() {
                   value={nlText}
                   onChange={(e) => setNlText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInterpret() } }}
-                  placeholder={listening ? 'Escuchando...' : 'Ej: gasté 50 mil en mercado ayer'}
+                  placeholder={listening ? 'Escuchando...' : 'Ej: gasté 50 mil en compras hoy'}
                   className="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none"
                 />
                 <button
@@ -1018,11 +1503,11 @@ export default function TransactionsPage() {
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Descripción</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Descripción / Concepto</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Compra de insumos"
+                  placeholder="Ej. Compra de supermercado"
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
@@ -1106,29 +1591,13 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
-              {aiNewCategory && (
-                <div className="bg-emerald-950/20 border border-emerald-550/30 rounded-md p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
-                  <div className="text-xs">
-                    <span className="text-emerald-400 font-bold block">💡 Nueva categoría sugerida:</span>
-                    <span className="text-slate-200">{aiNewCategory.parent} <span className="text-slate-500">/</span> {aiNewCategory.name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCreateAiCategory}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold self-start sm:self-center transition-all cursor-pointer"
-                  >
-                    Crear y Asignar
-                  </button>
-                </div>
-              )}
-
               {itemsEditor}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-350 rounded-md text-xs font-semibold transition-all cursor-pointer"
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 rounded-md text-xs font-semibold transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1150,12 +1619,12 @@ export default function TransactionsPage() {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-md p-6 shadow-md relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <button
               onClick={() => { setIsEditModalOpen(false); setEditingTransaction(null); }}
-              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100"
+              className="absolute top-4 right-4 text-slate-500 hover:text-slate-100 cursor-pointer"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-slate-100 mb-6">Editar Transacción</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-6">Editar Movimiento</h2>
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
@@ -1247,29 +1716,13 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
-              {aiNewCategory && (
-                <div className="bg-emerald-950/20 border border-emerald-550/30 rounded-md p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
-                  <div className="text-xs">
-                    <span className="text-emerald-400 font-bold block">💡 Nueva categoría sugerida:</span>
-                    <span className="text-slate-200">{aiNewCategory.parent} <span className="text-slate-500">/</span> {aiNewCategory.name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCreateAiCategory}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold self-start sm:self-center transition-all cursor-pointer"
-                  >
-                    Crear y Asignar
-                  </button>
-                </div>
-              )}
-
               {itemsEditor}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => { setIsEditModalOpen(false); setEditingTransaction(null); }}
-                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-305 rounded-md text-xs font-semibold transition-all cursor-pointer"
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 rounded-md text-xs font-semibold transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1298,27 +1751,27 @@ export default function TransactionsPage() {
 
             <div className="mb-4">
               <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                selectedDetailTx.type === 'income' ? 'bg-emerald-500/10 text-emerald-450' : 'bg-rose-500/10 text-rose-400'
+                selectedDetailTx.type === 'income' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
               }`}>
-                <span className={`w-1 h-1 rounded-full ${selectedDetailTx.type === 'income' ? 'bg-emerald-555' : 'bg-rose-500'}`}></span>
+                <span className={`w-1 h-1 rounded-full ${selectedDetailTx.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                 {selectedDetailTx.type === 'income' ? 'Ingreso' : 'Gasto'}
               </span>
               <h2 className="text-lg font-black text-slate-100 mt-2 tracking-tight leading-snug">{selectedDetailTx.description}</h2>
             </div>
 
-            <div className="bg-slate-955 border border-slate-850 rounded-md p-4 mb-4 text-center">
+            <div className="bg-slate-950 border border-slate-850 rounded-md p-4 mb-4 text-center">
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
               <span className={`text-2xl font-black block mt-1 ${
-                selectedDetailTx.type === 'income' ? 'text-emerald-450' : 'text-rose-450'
+                selectedDetailTx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'
               }`}>
                 {selectedDetailTx.type === 'income' ? '+' : '-'}${Math.abs(selectedDetailTx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="space-y-3.5 text-xs pb-4 border-b border-slate-800">
+            <div className="space-y-3 text-xs pb-4 border-b border-slate-800">
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-medium">Categoría</span>
-                <span className="text-slate-200 font-bold bg-slate-955 border border-slate-800 px-2 py-0.5 rounded-md text-[10px]">
+                <span className="text-slate-200 font-bold bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-md text-[10px]">
                   {getCategoryDisplayName(selectedDetailTx.category_id)}
                 </span>
               </div>
@@ -1338,11 +1791,11 @@ export default function TransactionsPage() {
             {/* Desglose de ítems */}
             {selectedDetailTx.details && selectedDetailTx.details.length > 0 && (
               <div className="mt-4">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-2">Desglose del recibo</span>
-                <div className="bg-slate-955 border border-slate-850 rounded-md p-3.5 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-2">Detalles / Bolsillo</span>
+                <div className="bg-slate-950 border border-slate-850 rounded-md p-3 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
                   {selectedDetailTx.details.map((it, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs leading-normal">
-                      <span className="text-slate-355 truncate pr-3">{it.description || 'Ítem'}</span>
+                      <span className="text-slate-300 truncate pr-3">{it.description || 'Ítem'}</span>
                       <span className="text-slate-200 font-bold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
                     </div>
                   ))}
@@ -1369,7 +1822,7 @@ export default function TransactionsPage() {
                   setSelectedDetailTx(null)
                   handleDelete(txId)
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-455 rounded-md text-xs font-bold transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 rounded-md text-xs font-bold transition-all cursor-pointer"
               >
                 <FiTrash2 className="w-3.5 h-3.5" />
                 Eliminar
