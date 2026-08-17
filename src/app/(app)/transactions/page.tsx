@@ -800,19 +800,6 @@ export default function TransactionsPage() {
             Exportar CSV
           </button>
 
-          <label className={`flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer ${scanning ? 'opacity-60 pointer-events-none' : ''}`}>
-            {scanning ? (
-              <svg className="animate-spin h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-              </svg>
-            ) : (
-              <FiCamera className="w-4 h-4" />
-            )}
-            {scanning ? 'Leyendo...' : 'Escanear'}
-            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanReceipt} disabled={scanning} />
-          </label>
-
           <button
             onClick={openAddModal}
             className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer"
@@ -1585,17 +1572,36 @@ export default function TransactionsPage() {
 
             <h2 className="text-md font-bold text-slate-100 mb-4">Añadir Nuevo Movimiento</h2>
 
-            <div className="mb-4 bg-slate-950 border border-emerald-500/20 rounded-md p-3">
-              <label className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
-                <FiZap className="w-3 h-3" /> Escribir con IA o Voz
-              </label>
-              <div className="flex gap-2">
+            {/* ASISTENTE INTELIGENTE: ESCANEAR RECIBO O DICTAR / ESCRIBIR */}
+            <div className="mb-4 bg-slate-950 border border-emerald-500/20 rounded-lg p-3 sm:p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+                  <FiZap className="w-3.5 h-3.5 shrink-0" /> Asistente IA Rápido
+                </span>
+
+                {/* Opción de Escanear Factura/Recibo */}
+                <label className={`inline-flex items-center gap-1.5 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all shrink-0 ${scanning ? 'opacity-60 pointer-events-none' : ''}`}>
+                  {scanning ? (
+                    <svg className="animate-spin h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                  ) : (
+                    <FiCamera className="w-3.5 h-3.5 text-emerald-400" />
+                  )}
+                  <span>{scanning ? 'Analizando...' : 'Escanear Recibo'}</span>
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanReceipt} disabled={scanning} />
+                </label>
+              </div>
+
+              {/* Barra de Entrada de Lenguaje Natural y Voz */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={startDictation}
                   disabled={nlLoading}
                   title="Dictar por voz"
-                  className={`px-2.5 py-2 rounded-md text-xs font-bold border transition-all cursor-pointer disabled:opacity-50 ${listening ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 animate-pulse' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-emerald-400'}`}
+                  className={`p-2 rounded-md text-xs font-bold border transition-all cursor-pointer shrink-0 disabled:opacity-50 ${listening ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 animate-pulse' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-emerald-400'}`}
                 >
                   <FiMic className="w-4 h-4" />
                 </button>
@@ -1605,13 +1611,13 @@ export default function TransactionsPage() {
                   onChange={(e) => setNlText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleInterpret() } }}
                   placeholder={listening ? 'Escuchando...' : 'Ej: gasté 50 mil en compras hoy'}
-                  className="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none"
+                  className="flex-1 min-w-0 bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleInterpret()}
                   disabled={nlLoading || !nlText.trim()}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold disabled:opacity-50 shrink-0 whitespace-nowrap shadow-sm transition-all cursor-pointer"
                 >
                   {nlLoading ? '...' : 'Interpretar'}
                 </button>
