@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { resolveCategoryIcon, getCategoryIconComponent } from '@/lib/categoryIcons'
+import { resolveCategoryIcon } from '@/lib/categoryIcons'
 
 interface CategoryIconProps {
   icon?: string | null
@@ -21,9 +21,7 @@ export default function CategoryIcon({
   variant = 'badge'
 }: CategoryIconProps) {
   const resolved = resolveCategoryIcon({ name, icon, type })
-  const IconComponent = icon ? getCategoryIconComponent(icon) : resolved.Icon
-
-  const isIncome = type === 'income'
+  const IconComponent = resolved.icon
 
   // Tamaños de icono
   const iconSizeClasses = {
@@ -37,7 +35,7 @@ export default function CategoryIcon({
   if (variant === 'plain') {
     return (
       <IconComponent 
-        className={`${iconSizeClasses[size]} ${isIncome ? 'text-emerald-400' : 'text-rose-400'} ${className}`} 
+        className={`${iconSizeClasses[size]} ${resolved.textClass} ${className}`} 
       />
     )
   }
@@ -49,15 +47,11 @@ export default function CategoryIcon({
     lg: 'w-10 h-10 rounded-xl'
   }
 
-  const colorClasses = isIncome 
-    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-
   return (
     <div 
       className={`flex items-center justify-center flex-shrink-0 border transition-transform shadow-xs ${
         variant === 'circle' ? 'rounded-full' : containerSizeClasses[size]
-      } ${colorClasses} ${className}`}
+      } ${resolved.bgClass} ${className}`}
     >
       <IconComponent className={iconSizeClasses[size]} />
     </div>

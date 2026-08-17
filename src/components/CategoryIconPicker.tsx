@@ -88,10 +88,8 @@ export default function CategoryIconPicker({
         className="flex items-center gap-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md p-2.5 cursor-pointer transition-all group"
       >
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-all ${
-          type === 'income'
-            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 group-hover:scale-105'
-            : 'bg-rose-500/15 border-rose-500/30 text-rose-400 group-hover:scale-105'
-        }`}>
+          currentIconItem?.bgClass || 'bg-slate-800 text-slate-300 border-slate-700'
+        } group-hover:scale-105`}>
           <EffectiveIcon className="w-4.5 h-4.5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -157,13 +155,11 @@ export default function CategoryIconPicker({
                   title={item.label}
                   className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all cursor-pointer group relative ${
                     isSelected
-                      ? type === 'income'
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 ring-2 ring-emerald-500/40 shadow-sm'
-                        : 'bg-rose-500/20 border-rose-500 text-rose-300 ring-2 ring-rose-500/40 shadow-sm'
-                      : 'bg-slate-900 border-slate-800/80 text-slate-400 hover:text-slate-100 hover:bg-slate-850 hover:border-slate-700'
+                      ? `${item.bgClass} ring-2 ring-emerald-500/50 shadow-sm scale-105`
+                      : `${item.bgClass} opacity-80 hover:opacity-100 hover:scale-110`
                   }`}
                 >
-                  <IconComp className="w-4 h-4 group-hover:scale-115 transition-transform" />
+                  <IconComp className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   {isSelected && (
                     <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-xs">
                       <FiCheck className="w-2.5 h-2.5 stroke-[3]" />
