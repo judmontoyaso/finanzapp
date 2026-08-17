@@ -938,38 +938,47 @@ export default function TransactionsPage() {
 
         {/* Resumen del Mes Seleccionado */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <FiTrendingUp className="w-3.5 h-3.5 text-emerald-400" /> Ingresos
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <FiTrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> <span className="truncate">Ingresos</span>
             </span>
-            <p className="text-lg font-black text-emerald-400 mt-1">
+            <p 
+              className="text-sm sm:text-base xl:text-lg font-black text-emerald-400 mt-1 truncate" 
+              title={`+$${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
               +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
 
-          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <FiTrendingDown className="w-3.5 h-3.5 text-rose-400" /> Gastos
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <FiTrendingDown className="w-3.5 h-3.5 text-rose-400 shrink-0" /> <span className="truncate">Gastos</span>
             </span>
-            <p className="text-lg font-black text-rose-400 mt-1">
+            <p 
+              className="text-sm sm:text-base xl:text-lg font-black text-rose-400 mt-1 truncate" 
+              title={`-${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
               -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
 
-          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <FiDollarSign className="w-3.5 h-3.5 text-slate-400" /> Balance Neto
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <FiDollarSign className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span className="truncate">Balance Neto</span>
             </span>
-            <p className={`text-lg font-black mt-1 ${monthStats.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <p 
+              className={`text-sm sm:text-base xl:text-lg font-black mt-1 truncate ${monthStats.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+              title={`${monthStats.balance >= 0 ? '+' : '-'}$${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
               {monthStats.balance >= 0 ? '+' : '-'}${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
 
-          <div className="bg-slate-950 border border-slate-850 rounded-md p-3.5">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <FiGrid className="w-3.5 h-3.5 text-slate-400" /> Movimientos
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <FiGrid className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span className="truncate">Movimientos</span>
             </span>
-            <p className="text-lg font-black text-slate-200 mt-1">
+            <p className="text-sm sm:text-base xl:text-lg font-black text-slate-200 mt-1 truncate">
               {monthStats.count} <span className="text-xs font-normal text-slate-500">registros</span>
             </p>
           </div>
@@ -1136,12 +1145,14 @@ export default function TransactionsPage() {
           {/* GASTOS POR CATEGORÍA */}
           {categorizedData.expenseGroups.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-rose-500/20 pb-2">
-                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                <h2 className="text-xs font-black uppercase tracking-wider text-rose-400">
-                  Gastos por Categoría ({categorizedData.expenseGroups.length})
-                </h2>
-                <span className="ml-auto text-xs font-black text-rose-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-rose-400 truncate">
+                    Gastos por Categoría ({categorizedData.expenseGroups.length})
+                  </h2>
+                </div>
+                <span className="text-xs font-black text-rose-400 whitespace-nowrap ml-auto sm:ml-0">
                   Total: -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -1157,9 +1168,9 @@ export default function TransactionsPage() {
                       <button
                         type="button"
                         onClick={() => toggleCategoryAccordion(group.categoryId)}
-                        className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
+                        className="w-full p-3 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                           <CategoryIcon 
                             icon={group.category?.icon} 
                             name={group.categoryName} 
@@ -1169,7 +1180,7 @@ export default function TransactionsPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
-                              <span className="text-[10px] bg-rose-500/10 text-rose-300 font-semibold px-2 py-0.2 rounded-full border border-rose-500/20">
+                              <span className="text-[10px] bg-rose-500/10 text-rose-300 font-semibold px-2 py-0.2 rounded-full border border-rose-500/20 shrink-0">
                                 {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
                               </span>
                             </div>
@@ -1179,16 +1190,16 @@ export default function TransactionsPage() {
                               <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
                                 <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
                               </div>
-                              <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+                              <span className="text-[9px] text-slate-500 font-bold shrink-0">{percentage.toFixed(1)}%</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className="text-sm font-black text-rose-400">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                          <span className="text-xs sm:text-sm font-black text-rose-400 whitespace-nowrap">
                             -${group.totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800">
+                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800 shrink-0">
                             {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
                           </div>
                         </div>
@@ -1260,12 +1271,14 @@ export default function TransactionsPage() {
           {/* INGRESOS POR CATEGORÍA */}
           {categorizedData.incomeGroups.length > 0 && (
             <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2 border-b border-emerald-500/20 pb-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <h2 className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                  Ingresos por Categoría ({categorizedData.incomeGroups.length})
-                </h2>
-                <span className="ml-auto text-xs font-black text-emerald-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-emerald-400 truncate">
+                    Ingresos por Categoría ({categorizedData.incomeGroups.length})
+                  </h2>
+                </div>
+                <span className="text-xs font-black text-emerald-400 whitespace-nowrap ml-auto sm:ml-0">
                   Total: +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -1280,9 +1293,9 @@ export default function TransactionsPage() {
                       <button
                         type="button"
                         onClick={() => toggleCategoryAccordion(group.categoryId)}
-                        className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
+                        className="w-full p-3 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                           <CategoryIcon 
                             icon={group.category?.icon} 
                             name={group.categoryName} 
@@ -1292,7 +1305,7 @@ export default function TransactionsPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-semibold px-2 py-0.2 rounded-full border border-emerald-500/20">
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-semibold px-2 py-0.2 rounded-full border border-emerald-500/20 shrink-0">
                                 {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
                               </span>
                             </div>
@@ -1301,16 +1314,16 @@ export default function TransactionsPage() {
                               <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
                                 <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
                               </div>
-                              <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+                              <span className="text-[9px] text-slate-500 font-bold shrink-0">{percentage.toFixed(1)}%</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className="text-sm font-black text-emerald-400">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                          <span className="text-xs sm:text-sm font-black text-emerald-400 whitespace-nowrap">
                             +${group.totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800">
+                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800 shrink-0">
                             {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
                           </div>
                         </div>
