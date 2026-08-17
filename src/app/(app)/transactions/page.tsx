@@ -17,8 +17,6 @@ import {
   FiChevronUp,
   FiFilter,
   FiCamera,
-  FiArrowUpRight,
-  FiArrowDownLeft,
   FiList,
   FiColumns,
   FiGrid,
@@ -32,6 +30,7 @@ import {
   FiFolder
 } from 'react-icons/fi'
 import TransactionsTable from '@/components/TransactionsTable'
+import CategoryIcon from '@/components/CategoryIcon'
 
 // Nombres de meses en español
 const MONTH_NAMES = [
@@ -1160,20 +1159,28 @@ export default function TransactionsPage() {
                         onClick={() => toggleCategoryAccordion(group.categoryId)}
                         className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
-                            <span className="text-[10px] bg-rose-500/10 text-rose-300 font-semibold px-2 py-0.2 rounded-full border border-rose-500/20">
-                              {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
-                            </span>
-                          </div>
-
-                          {/* Barra de progreso / porcentaje de gasto */}
-                          <div className="flex items-center gap-2 mt-1.5 max-w-xs">
-                            <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                              <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <CategoryIcon 
+                            icon={group.category?.icon} 
+                            name={group.categoryName} 
+                            type="expense" 
+                            size="sm" 
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
+                              <span className="text-[10px] bg-rose-500/10 text-rose-300 font-semibold px-2 py-0.2 rounded-full border border-rose-500/20">
+                                {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
+                              </span>
                             </div>
-                            <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+
+                            {/* Barra de progreso / porcentaje de gasto */}
+                            <div className="flex items-center gap-2 mt-1.5 max-w-xs">
+                              <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                                <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
+                              </div>
+                              <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+                            </div>
                           </div>
                         </div>
 
@@ -1275,19 +1282,27 @@ export default function TransactionsPage() {
                         onClick={() => toggleCategoryAccordion(group.categoryId)}
                         className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-semibold px-2 py-0.2 rounded-full border border-emerald-500/20">
-                              {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-1.5 max-w-xs">
-                            <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                              <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <CategoryIcon 
+                            icon={group.category?.icon} 
+                            name={group.categoryName} 
+                            type="income" 
+                            size="sm" 
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-semibold px-2 py-0.2 rounded-full border border-emerald-500/20">
+                                {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
+                              </span>
                             </div>
-                            <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+
+                            <div className="flex items-center gap-2 mt-1.5 max-w-xs">
+                              <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
+                              </div>
+                              <span className="text-[9px] text-slate-500 font-bold">{percentage.toFixed(1)}%</span>
+                            </div>
                           </div>
                         </div>
 
@@ -1380,21 +1395,24 @@ export default function TransactionsPage() {
           <div className="divide-y divide-slate-800/70">
             {paginatedTransactions.map((tx) => {
               const isIncome = tx.type === 'income'
-              const Arrow = isIncome ? FiArrowUpRight : FiArrowDownLeft
               const hasDetail = !!tx.details && tx.details.length > 0
               const isExpanded = expandedId === tx.id
+              const txCat = categories.find(c => c.id === tx.category_id)
 
               return (
                 <div key={tx.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="group flex items-center gap-3">
-                    <span
+                    <div
                       onClick={() => setSelectedDetailTx(tx)}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                        isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                      }`}
+                      className="cursor-pointer"
                     >
-                      <Arrow className="w-4 h-4" />
-                    </span>
+                      <CategoryIcon 
+                        icon={txCat?.icon} 
+                        name={getCategoryDisplayName(tx.category_id)} 
+                        type={tx.type} 
+                        size="md" 
+                      />
+                    </div>
 
                     <div
                       onClick={() => setSelectedDetailTx(tx)}

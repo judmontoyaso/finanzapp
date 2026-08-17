@@ -12,6 +12,7 @@ import {
 } from '@tanstack/react-table'
 import { Transaction, Category } from '@/types'
 import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import CategoryIcon from '@/components/CategoryIcon'
 
 const col = createColumnHelper<Transaction>()
 
@@ -66,11 +67,22 @@ export default function TransactionsTable({
       col.accessor('category_id', {
         header: 'Categoría',
         enableSorting: false,
-        cell: (i) => (
-          <span className="inline-block px-2 py-0.5 bg-slate-950 text-slate-400 rounded-md text-[10px] border border-slate-800">
-            {catName.get(i.getValue()) || 'Sin categoría'}
-          </span>
-        ),
+        cell: (i) => {
+          const category = categories.find((c) => c.id === i.getValue())
+          const displayName = catName.get(i.getValue()) || 'Sin categoría'
+          return (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-950 text-slate-300 rounded-md text-[10px] border border-slate-800">
+              <CategoryIcon
+                icon={category?.icon}
+                name={displayName}
+                type={i.row.original.type}
+                size="xs"
+                variant="plain"
+              />
+              <span className="truncate max-w-[150px]">{displayName}</span>
+            </span>
+          )
+        },
       }),
       col.accessor('type', {
         header: 'Tipo',
@@ -110,7 +122,7 @@ export default function TransactionsTable({
         ),
       }),
     ],
-    [catName, onEdit, onDelete]
+    [catName, categories, onEdit, onDelete]
   )
 
   const table = useReactTable({

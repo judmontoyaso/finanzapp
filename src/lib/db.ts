@@ -275,6 +275,26 @@ export const LocalDB = {
     }
   },
 
+  // Helper para persistencia local de iconos de categorías
+  getCategoryIconsMap(): Record<string, string> {
+    if (typeof window === 'undefined') return {}
+    try {
+      const raw = localStorage.getItem('finanzas_category_icons')
+      return raw ? JSON.parse(raw) : {}
+    } catch {
+      return {}
+    }
+  },
+
+  setCategoryIcon(catId: string, iconKey: string) {
+    if (typeof window === 'undefined' || !catId) return
+    try {
+      const map = this.getCategoryIconsMap()
+      map[catId] = iconKey
+      localStorage.setItem('finanzas_category_icons', JSON.stringify(map))
+    } catch {}
+  },
+
   // --- CATEGORIES ---
   async getCategories(): Promise<Category[]> {
     const activeWs = this.getActiveWorkspaceId()
@@ -288,38 +308,104 @@ export const LocalDB = {
       .order('name', { ascending: true })
 
     if (error) throw error
-    return data as Category[]
+    
+    // Combinar con los iconos persistidos
+    const iconsMap = this.getCategoryIconsMap()
+    const categoriesWithIcons = (data as Category[]).map(cat => ({
+      ...cat,
+      icon: cat.icon || iconsMap[cat.id] || null
+    }))
+
+    return categoriesWithIcons
   },
 
-  async addCategory(name: string, type: 'income' | 'expense', parent_id?: string | null): Promise<Category> {
+  async addCategory(name: string, type: 'income' | 'expense', parent_id?: string | null, icon?: string | null): Promise<Category> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('No autenticado')
     const activeWs = this.getActiveWorkspaceId()
     if (!activeWs) throw new Error('No hay espacio activo')
 
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({
+    let createdCat: Category | null = null
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name,
+          type,
+          parent_id: parent_id || null,
+          workspace_id: activeWs,
+          user_id: user.id,
+          ...(icon ? { icon } : {})
+        })
+        .select()
+
+      if (!error && data && data[0]) {
+        createdCat = data[0] as Category
+      }
+    } catch {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name,
+          type,
+          parent_id: parent_id || null,
+          workspace_id: activeWs,
+          user_id: user.id
+        })
+        .select()
+
+      if (error) throw error
+      if (data && data[0]) {
+        createdCat = data[0] as Category
+      }
+    }
+
+    if (!createdCat) {
+      createdCat = {
+        id: 'fallback-cat-' + Date.now(),
         name,
         type,
         parent_id: parent_id || null,
         workspace_id: activeWs,
-        user_id: user.id
-      })
-      .select()
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      }
+    }
 
-    if (error) throw error
+    if (icon && createdCat.id) {
+      this.setCategoryIcon(createdCat.id, icon)
+      createdCat.icon = icon
+    }
+
     this.dispatchEvent()
-    return (data && data[0]) ? (data[0] as Category) : { id: 'fallback-cat-id', name, type, parent_id: parent_id || null, workspace_id: activeWs, user_id: user.id } as Category
+    return createdCat
   },
 
-  async updateCategory(id: string, patch: { name?: string; parent_id?: string | null }): Promise<void> {
-    const { error } = await supabase
-      .from('categories')
-      .update(patch)
-      .eq('id', id)
+  async updateCategory(id: string, patch: { name?: string; parent_id?: string | null; icon?: string | null }): Promise<void> {
+    if (patch.icon !== undefined) {
+      if (patch.icon) this.setCategoryIcon(id, patch.icon)
+    }
 
-    if (error) throw error
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update(patch)
+        .eq('id', id)
+
+      if (error) throw error
+    } catch {
+      const safePatch = { ...patch }
+      delete safePatch.icon
+      if (Object.keys(safePatch).length > 0) {
+        const { error } = await supabase
+          .from('categories')
+          .update(safePatch)
+          .eq('id', id)
+
+        if (error) throw error
+      }
+    }
+
     this.dispatchEvent()
   },
 
