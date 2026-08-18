@@ -172,9 +172,6 @@ export default function TransactionsPage() {
   const [suggesting, setSuggesting] = useState(false)
   const [listening, setListening] = useState(false)
 
-  // Fila expandida en la lista (para ver el detalle)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-
   // Acordeones de categorías expandidos
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
 
@@ -1198,11 +1195,12 @@ export default function TransactionsPage() {
                           {group.transactions.map((tx) => {
                             const hasDetail = !!tx.details && tx.details.length > 0
                             return (
-                              <div key={tx.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition-colors group">
-                                <div 
-                                  onClick={() => setSelectedDetailTx(tx)}
-                                  className="min-w-0 flex-1 cursor-pointer"
-                                >
+                              <div 
+                                key={tx.id} 
+                                onClick={() => setSelectedDetailTx(tx)}
+                                className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/80 transition-colors group cursor-pointer"
+                              >
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-slate-200 truncate">{tx.description}</span>
                                     {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
@@ -1217,31 +1215,9 @@ export default function TransactionsPage() {
                                 </div>
 
                                 <div className="flex items-center gap-3 flex-shrink-0">
-                                  <span 
-                                    onClick={() => setSelectedDetailTx(tx)}
-                                    className="text-xs font-bold text-rose-400 cursor-pointer"
-                                  >
+                                  <span className="text-xs font-bold text-rose-400">
                                     -${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                   </span>
-
-                                  <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditOpen(tx)}
-                                      title="Editar"
-                                      className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-all cursor-pointer"
-                                    >
-                                      <FiEdit className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDelete(tx.id)}
-                                      title="Eliminar"
-                                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-all cursor-pointer"
-                                    >
-                                      <FiTrash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
                                 </div>
                               </div>
                             )
@@ -1321,11 +1297,12 @@ export default function TransactionsPage() {
                           {group.transactions.map((tx) => {
                             const hasDetail = !!tx.details && tx.details.length > 0
                             return (
-                              <div key={tx.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition-colors group">
-                                <div 
-                                  onClick={() => setSelectedDetailTx(tx)}
-                                  className="min-w-0 flex-1 cursor-pointer"
-                                >
+                              <div 
+                                key={tx.id} 
+                                onClick={() => setSelectedDetailTx(tx)}
+                                className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/80 transition-colors group cursor-pointer"
+                              >
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-slate-200 truncate">{tx.description}</span>
                                     {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
@@ -1340,31 +1317,9 @@ export default function TransactionsPage() {
                                 </div>
 
                                 <div className="flex items-center gap-3 flex-shrink-0">
-                                  <span 
-                                    onClick={() => setSelectedDetailTx(tx)}
-                                    className="text-xs font-bold text-emerald-400 cursor-pointer"
-                                  >
+                                  <span className="text-xs font-bold text-emerald-400">
                                     +${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                   </span>
-
-                                  <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditOpen(tx)}
-                                      title="Editar"
-                                      className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-all cursor-pointer"
-                                    >
-                                      <FiEdit className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDelete(tx.id)}
-                                      title="Eliminar"
-                                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-all cursor-pointer"
-                                    >
-                                      <FiTrash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
                                 </div>
                               </div>
                             )
@@ -1396,28 +1351,22 @@ export default function TransactionsPage() {
             {paginatedTransactions.map((tx) => {
               const isIncome = tx.type === 'income'
               const hasDetail = !!tx.details && tx.details.length > 0
-              const isExpanded = expandedId === tx.id
               const txCat = categories.find(c => c.id === tx.category_id)
 
               return (
                 <div key={tx.id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="group flex items-center gap-3">
-                    <div
-                      onClick={() => setSelectedDetailTx(tx)}
-                      className="cursor-pointer"
-                    >
-                      <CategoryIcon 
-                        icon={txCat?.icon} 
-                        name={getCategoryDisplayName(tx.category_id)} 
-                        type={tx.type} 
-                        size="md" 
-                      />
-                    </div>
+                  <div 
+                    onClick={() => setSelectedDetailTx(tx)}
+                    className="group flex items-center gap-3 cursor-pointer hover:bg-slate-850/40 p-2 rounded-lg transition-colors"
+                  >
+                    <CategoryIcon 
+                      icon={txCat?.icon} 
+                      name={getCategoryDisplayName(tx.category_id)} 
+                      type={tx.type} 
+                      size="md" 
+                    />
 
-                    <div
-                      onClick={() => setSelectedDetailTx(tx)}
-                      className="min-w-0 flex-1 cursor-pointer text-left"
-                    >
+                    <div className="min-w-0 flex-1 text-left">
                       <p className="text-sm font-bold text-slate-100 truncate leading-tight">
                         {getCategoryDisplayName(tx.category_id)}
                       </p>
@@ -1436,60 +1385,17 @@ export default function TransactionsPage() {
                             {tx.details![0].description}
                           </span>
                         )}
-                        {hasDetail && !tx.details![0]?.description.startsWith('Bolsillo:') && (
-                          <span className="ml-1 inline-flex items-center gap-0.5 text-emerald-500 font-bold">
-                            {tx.details!.length} ítem{tx.details!.length > 1 ? 's' : ''}
-                          </span>
-                        )}
                       </div>
                     </div>
 
                     <span
-                      onClick={() => setSelectedDetailTx(tx)}
-                      className={`text-sm font-extrabold whitespace-nowrap cursor-pointer ${
+                      className={`text-sm font-extrabold whitespace-nowrap ${
                         isIncome ? 'text-emerald-400' : 'text-rose-400'
                       }`}
                     >
                       {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                     </span>
-
-                    <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      {hasDetail && (
-                        <button
-                          onClick={() => setExpandedId(isExpanded ? null : tx.id)}
-                          title="Ver productos"
-                          className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
-                        >
-                          {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEditOpen(tx)}
-                        title="Editar"
-                        className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
-                      >
-                        <FiEdit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(tx.id)}
-                        title="Eliminar"
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-all cursor-pointer"
-                      >
-                        <FiTrash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
                   </div>
-
-                  {hasDetail && isExpanded && (
-                    <div className="mt-2 ml-12 bg-slate-950 border border-slate-800 rounded-md p-3 space-y-1.5">
-                      {tx.details!.map((it, i) => (
-                        <div key={i} className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-300 truncate pr-3">{it.description || 'Ítem'}</span>
-                          <span className="text-slate-400 font-semibold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )
             })}

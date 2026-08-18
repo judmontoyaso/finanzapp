@@ -11,7 +11,7 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { Transaction, Category } from '@/types'
-import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import { FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import CategoryIcon from '@/components/CategoryIcon'
 
 const col = createColumnHelper<Transaction>()
@@ -19,14 +19,12 @@ const col = createColumnHelper<Transaction>()
 export default function TransactionsTable({
   transactions,
   categories,
-  onEdit,
-  onDelete,
   onRowClick,
 }: {
   transactions: Transaction[]
   categories: Category[]
-  onEdit: (tx: Transaction) => void
-  onDelete: (id: string) => void
+  onEdit?: (tx: Transaction) => void
+  onDelete?: (id: string) => void
   onRowClick?: (tx: Transaction) => void
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }])
@@ -106,22 +104,8 @@ export default function TransactionsTable({
           )
         },
       }),
-      col.display({
-        id: 'actions',
-        header: '',
-        cell: (i) => (
-          <div className="flex justify-end items-center gap-1">
-            <button onClick={() => onEdit(i.row.original)} title="Editar" className="p-1.5 text-slate-500 hover:text-slate-100 hover:bg-slate-800 rounded-md transition-all cursor-pointer">
-              <FiEdit className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onDelete(i.row.original.id)} title="Eliminar" className="p-1.5 text-slate-500 hover:text-rose-500 hover:bg-slate-800 rounded-md transition-all cursor-pointer">
-              <FiTrash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ),
-      }),
     ],
-    [catName, categories, onEdit, onDelete]
+    [catName, categories]
   )
 
   const table = useReactTable({
