@@ -408,7 +408,7 @@ export default function DashboardPage() {
               <img src="/icons/gold-ingots.png" alt="" className="w-6 h-6 object-contain" />
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Total histórico acumulado</p>
+          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Total acumulado en este espacio</p>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">

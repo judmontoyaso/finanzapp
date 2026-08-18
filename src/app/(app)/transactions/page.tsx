@@ -834,7 +834,7 @@ export default function TransactionsPage() {
             >
               {allTimeStats.netBalance >= 0 ? '+' : '-'}${Math.abs(allTimeStats.netBalance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Total histórico</span>
+            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">En este espacio</span>
           </div>
 
           <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
