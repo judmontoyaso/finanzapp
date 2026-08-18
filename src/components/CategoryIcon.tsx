@@ -8,7 +8,7 @@ interface CategoryIconProps {
   name?: string
   type?: 'income' | 'expense'
   className?: string
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   variant?: 'badge' | 'plain' | 'circle'
 }
 
@@ -18,20 +18,30 @@ export default function CategoryIcon({
   type,
   className = '',
   size = 'md',
-  variant = 'badge'
+  variant = 'circle'
 }: CategoryIconProps) {
   const resolved = resolveCategoryIcon({ name, icon, type })
   const IconComponent = resolved.icon
 
-  // Tamaños de icono
+  // Tamaños del glifo de icono
   const iconSizeClasses = {
     xs: 'w-2.5 h-2.5',
     sm: 'w-3.5 h-3.5',
     md: 'w-4 h-4',
-    lg: 'w-5 h-5'
+    lg: 'w-5 h-5',
+    xl: 'w-6 h-6'
   }
 
-  // Contenedores por variante
+  // Dimensiones del contenedor redondo
+  const containerSizeClasses = {
+    xs: 'w-5 h-5 min-w-5',
+    sm: 'w-7.5 h-7.5 min-w-7.5',
+    md: 'w-9 h-9 min-w-9',
+    lg: 'w-11 h-11 min-w-11',
+    xl: 'w-13 h-13 min-w-13'
+  }
+
+  // Si se solicita sólo el glifo sin fondo
   if (variant === 'plain') {
     return (
       <IconComponent 
@@ -40,20 +50,13 @@ export default function CategoryIcon({
     )
   }
 
-  const containerSizeClasses = {
-    xs: 'w-5 h-5 rounded',
-    sm: 'w-7 h-7 rounded-md',
-    md: 'w-8 h-8 rounded-lg',
-    lg: 'w-10 h-10 rounded-xl'
-  }
-
   return (
     <div 
-      className={`flex items-center justify-center flex-shrink-0 border transition-transform shadow-xs ${
-        variant === 'circle' ? 'rounded-full' : containerSizeClasses[size]
+      className={`rounded-full flex items-center justify-center shrink-0 border transition-all duration-200 shadow-xs ${
+        containerSizeClasses[size]
       } ${resolved.bgClass} ${className}`}
     >
-      <IconComponent className={iconSizeClasses[size]} />
+      <IconComponent className={`${iconSizeClasses[size]} shrink-0`} />
     </div>
   )
 }

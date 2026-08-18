@@ -87,9 +87,9 @@ export default function CategoryIconPicker({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md p-2.5 cursor-pointer transition-all group"
       >
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-all ${
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all ${
           currentIconItem?.bgClass || 'bg-slate-800 text-slate-300 border-slate-700'
-        } group-hover:scale-105`}>
+        } group-hover:scale-105 shrink-0`}>
           <EffectiveIcon className="w-4.5 h-4.5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -100,7 +100,7 @@ export default function CategoryIconPicker({
             {selectedIcon ? 'Icono personalizado' : 'Sugerido automáticamente por nombre'}
           </span>
         </div>
-        <span className="text-[10px] bg-slate-900 border border-slate-800 px-2 py-1 rounded text-slate-400 font-medium">
+        <span className="text-[10px] bg-slate-900 border border-slate-800 px-2 py-1 rounded-md text-slate-400 font-medium">
           {isOpen ? 'Cerrar' : 'Elegir'}
         </span>
       </div>
@@ -138,8 +138,8 @@ export default function CategoryIconPicker({
             ))}
           </div>
 
-          {/* Rejilla de iconos */}
-          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+          {/* Rejilla de iconos redondos */}
+          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar p-1">
             {filteredIcons.map((item) => {
               const IconComp = item.icon
               const isSelected = effectiveIconKey === item.key
@@ -153,15 +153,15 @@ export default function CategoryIconPicker({
                     setIsOpen(false)
                   }}
                   title={item.label}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all cursor-pointer group relative ${
+                  className={`w-9 h-9 mx-auto flex items-center justify-center rounded-full border transition-all cursor-pointer group relative ${
                     isSelected
-                      ? `${item.bgClass} ring-2 ring-emerald-500/50 shadow-sm scale-105`
-                      : `${item.bgClass} opacity-80 hover:opacity-100 hover:scale-110`
+                      ? `${item.bgClass} ring-2 ring-emerald-500/50 shadow-sm scale-110`
+                      : `${item.bgClass} opacity-85 hover:opacity-100 hover:scale-110`
                   }`}
                 >
                   <IconComp className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   {isSelected && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-xs">
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-xs">
                       <FiCheck className="w-2.5 h-2.5 stroke-[3]" />
                     </span>
                   )}

@@ -71,13 +71,12 @@ export default function TransactionsTable({
           const category = categories.find((c) => c.id === i.getValue())
           const displayName = catName.get(i.getValue()) || 'Sin categoría'
           return (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-950 text-slate-300 rounded-md text-[10px] border border-slate-800">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-950 text-slate-300 rounded-full text-[10px] border border-slate-800">
               <CategoryIcon
                 icon={category?.icon}
                 name={displayName}
                 type={i.row.original.type}
                 size="xs"
-                variant="plain"
               />
               <span className="truncate max-w-[150px]">{displayName}</span>
             </span>
