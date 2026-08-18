@@ -12,6 +12,7 @@ import {
   FiChevronUp,
   FiActivity
 } from 'react-icons/fi'
+import CategoryIcon from '@/components/CategoryIcon'
 
 const COLORS = [
   '#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', 
@@ -531,13 +532,46 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Desglose de Categorías */}
+            {/* Desglose de Categorías y Movimientos */}
             <div className="lg:col-span-3 space-y-4">
-              <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                <span className="text-[11px] font-bold text-slate-400">
+                  {categoryReports.length} categorías con movimientos
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextState: Record<string, boolean> = {}
+                      categoryReports.forEach(c => { nextState[c.node.id] = true })
+                      setExpandedCategories(nextState)
+                    }}
+                    className="text-[10px] font-bold text-slate-400 hover:text-emerald-400 px-2 py-1 bg-slate-950 border border-slate-800 rounded transition-colors cursor-pointer"
+                  >
+                    Expandir Todo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCategories({})}
+                    className="text-[10px] font-bold text-slate-400 hover:text-slate-200 px-2 py-1 bg-slate-950 border border-slate-800 rounded transition-colors cursor-pointer"
+                  >
+                    Colapsar Todo
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                 {categoryReports.map(({ node, amount, prevAmount }) => {
                   const percent = totalChartAmount > 0 ? (amount / totalChartAmount) * 100 : 0
                   const isExpanded = !!expandedCategories[node.id]
                   
+                  // Obtener movimientos de esta categoría y sus hijas en este mes
+                  const categoryTxs = currentMonthTxs.filter(t => {
+                    if (t.type !== activeTab) return false
+                    if (t.category_id === node.id) return true
+                    return node.children.some(child => child.id === t.category_id)
+                  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
                   // Variación mes a mes
                   let pctDiff = 0
                   let isUp = false
@@ -548,38 +582,55 @@ export default function ReportsPage() {
 
                   return (
                     <div key={node.id} className="space-y-2 border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
-                      <div className="flex items-start justify-between gap-4">
-                        {/* Título de Categoría */}
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-slate-200 block truncate">{node.name}</span>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] font-semibold text-slate-505">{percent.toFixed(1)}% del total</span>
-                            
-                            {/* Variación MoM */}
-                            {prevAmount > 0 && (
-                              <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold ${
-                                isUp 
-                                  ? (activeTab === 'expense' ? 'text-rose-455' : 'text-emerald-400') 
-                                  : (activeTab === 'expense' ? 'text-emerald-400' : 'text-rose-455')
+                      <div 
+                        onClick={() => toggleExpand(node.id)}
+                        className="flex items-start justify-between gap-3 cursor-pointer group hover:bg-slate-850/40 p-2 rounded-md transition-colors"
+                      >
+                        {/* Icono y Título de Categoría */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <CategoryIcon 
+                            icon={node.icon} 
+                            name={node.name} 
+                            type={activeTab} 
+                            size="sm" 
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-200 block truncate group-hover:text-white">{node.name}</span>
+                              <span className={`text-[9px] font-semibold px-2 py-0.2 rounded-full border shrink-0 ${
+                                activeTab === 'expense' 
+                                  ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' 
+                                  : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                               }`}>
-                                {isUp ? <FiTrendingUp className="w-2.5 h-2.5" /> : <FiTrendingDown className="w-2.5 h-2.5" />}
-                                {Math.abs(pctDiff).toFixed(0)}% vs mes ant.
+                                {categoryTxs.length} mov{categoryTxs.length !== 1 ? 's' : ''}
                               </span>
-                            )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-semibold text-slate-400">{percent.toFixed(1)}% del total</span>
+                              
+                              {/* Variación MoM */}
+                              {prevAmount > 0 && (
+                                <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold ${
+                                  isUp 
+                                    ? (activeTab === 'expense' ? 'text-rose-400' : 'text-emerald-400') 
+                                    : (activeTab === 'expense' ? 'text-emerald-400' : 'text-rose-400')
+                                }`}>
+                                  {isUp ? <FiTrendingUp className="w-2.5 h-2.5" /> : <FiTrendingDown className="w-2.5 h-2.5" />}
+                                  {Math.abs(pctDiff).toFixed(0)}% vs mes ant.
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         {/* Monto & Botón Expansor */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs font-black text-slate-100">{formatCurrency(amount)}</span>
-                          {node.children && node.children.length > 0 && (
-                            <button
-                              onClick={() => toggleExpand(node.id)}
-                              className="p-1 hover:bg-slate-850 rounded text-slate-400 hover:text-slate-100 cursor-pointer"
-                            >
-                              {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
+                        <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+                          <span className={`text-xs font-black ${activeTab === 'expense' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {activeTab === 'expense' ? '-' : '+'}{formatCurrency(amount)}
+                          </span>
+                          <div className="p-1 bg-slate-950 rounded text-slate-400 group-hover:text-slate-100 border border-slate-800">
+                            {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
+                          </div>
                         </div>
                       </div>
 
@@ -593,43 +644,84 @@ export default function ReportsPage() {
                         ></div>
                       </div>
 
-                      {/* Desglose de subcategorías hijas */}
-                      {node.children && node.children.length > 0 && isExpanded && (
-                        <div className="pl-6 space-y-2 mt-2 bg-slate-950/40 rounded-md p-3 border border-slate-850/50">
-                          {node.children
-                            .map(child => {
-                              const childAmount = categoryAmounts[child.id] || 0
-                              return { child, amount: childAmount }
-                            })
-                            .filter(item => item.amount > 0)
-                            .sort((a, b) => b.amount - a.amount)
-                            .map(({ child, amount: childAmount }) => {
-                              const childPercent = amount > 0 ? (childAmount / amount) * 100 : 0
-                              return (
-                                <div key={child.id} className="space-y-1">
-                                  <div className="flex items-center justify-between text-[11px]">
-                                    <span className="text-slate-400 font-medium">{child.name}</span>
-                                    <span className="text-slate-300 font-bold">{formatCurrency(childAmount)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex-1 bg-slate-900 rounded-full h-1 overflow-hidden">
-                                      <div 
-                                        className={`h-full rounded-full ${
-                                          activeTab === 'expense' ? 'bg-rose-500/50' : 'bg-emerald-450/70'
-                                        }`} 
-                                        style={{ width: `${childPercent}%` }}
-                                      ></div>
+                      {/* Vista Detallada de Subcategorías y Transacciones */}
+                      {isExpanded && (
+                        <div className="space-y-3 mt-2 pt-2">
+                          {/* Desglose de subcategorías hijas */}
+                          {node.children && node.children.length > 0 && (
+                            <div className="space-y-2 bg-slate-950/60 rounded-md p-3 border border-slate-850/50">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Subcategorías
+                              </span>
+                              {node.children
+                                .map(child => {
+                                  const childAmount = categoryAmounts[child.id] || 0
+                                  return { child, amount: childAmount }
+                                })
+                                .filter(item => item.amount > 0)
+                                .sort((a, b) => b.amount - a.amount)
+                                .map(({ child, amount: childAmount }) => {
+                                  const childPercent = amount > 0 ? (childAmount / amount) * 100 : 0
+                                  return (
+                                    <div key={child.id} className="space-y-1">
+                                      <div className="flex items-center justify-between text-[11px]">
+                                        <span className="text-slate-300 font-medium">{child.name}</span>
+                                        <span className="text-slate-200 font-bold">{formatCurrency(childAmount)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex-1 bg-slate-900 rounded-full h-1 overflow-hidden">
+                                          <div 
+                                            className={`h-full rounded-full ${
+                                              activeTab === 'expense' ? 'bg-rose-500/50' : 'bg-emerald-400/70'
+                                            }`} 
+                                            style={{ width: `${childPercent}%` }}
+                                          ></div>
+                                        </div>
+                                        <span className="text-[9px] text-slate-400 font-semibold min-w-[30px] text-right">
+                                          {childPercent.toFixed(0)}%
+                                        </span>
+                                      </div>
                                     </div>
-                                    <span className="text-[9px] text-slate-500 font-semibold min-w-[30px] text-right">
-                                      {childPercent.toFixed(0)}%
+                                  )
+                                })
+                              }
+                            </div>
+                          )}
+
+                          {/* Lista de Movimientos individuales dentro de esta categoría */}
+                          {categoryTxs.length > 0 && (
+                            <div className="bg-slate-950/40 rounded-md border border-slate-850/60 overflow-hidden divide-y divide-slate-850/50">
+                              <div className="px-3 py-1.5 bg-slate-950/80 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase">
+                                <span>Movimientos ({categoryTxs.length})</span>
+                                <span>Monto</span>
+                              </div>
+                              {categoryTxs.map((tx) => {
+                                const hasDetail = !!tx.details && tx.details.length > 0
+                                return (
+                                  <div key={tx.id} className="p-2.5 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition-colors">
+                                    <div className="min-w-0 flex-1 text-left">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-slate-200 truncate">
+                                          {tx.description || 'Sin descripción'}
+                                        </span>
+                                        {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
+                                          <span className="text-[9px] bg-slate-900 text-slate-400 border border-slate-800 px-1.5 py-0.2 rounded font-medium shrink-0">
+                                            {tx.details![0].description}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                                        {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                      </span>
+                                    </div>
+
+                                    <span className={`text-xs font-bold shrink-0 ${activeTab === 'expense' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                      {activeTab === 'expense' ? '-' : '+'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                     </span>
                                   </div>
-                                </div>
-                              )
-                            })
-                          }
-                          {node.children.filter(child => (categoryAmounts[child.id] || 0) > 0).length === 0 && (
-                            <span className="text-[10px] text-slate-500 italic">No hay registros en las subcategorías.</span>
+                                )
+                              })}
+                            </div>
                           )}
                         </div>
                       )}

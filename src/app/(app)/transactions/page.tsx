@@ -13,12 +13,8 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiChevronDown,
-  FiChevronUp,
   FiFilter,
   FiCamera,
-  FiList,
-  FiColumns,
-  FiGrid,
   FiZap,
   FiMic,
   FiX,
@@ -26,9 +22,9 @@ import {
   FiTrendingDown,
   FiTrendingUp,
   FiDollarSign,
-  FiFolder
+  FiFolder,
+  FiGrid
 } from 'react-icons/fi'
-import TransactionsTable from '@/components/TransactionsTable'
 import CategoryIcon from '@/components/CategoryIcon'
 
 // Nombres de meses en español
@@ -147,9 +143,6 @@ export default function TransactionsPage() {
   // Filtros avanzados colapsables
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Vista: categorías (default), lista o tabla
-  const [viewMode, setViewMode] = useState<'categories' | 'list' | 'table'>('categories')
-
   // Estado de modales
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -172,9 +165,6 @@ export default function TransactionsPage() {
   const [nlLoading, setNlLoading] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
   const [listening, setListening] = useState(false)
-
-  // Acordeones de categorías expandidos
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
@@ -259,15 +249,6 @@ export default function TransactionsPage() {
     }
   }, [openAddModal])
 
-  useEffect(() => {
-    const v = localStorage.getItem('tx_view')
-    if (v === 'categories' || v === 'table' || v === 'list') setViewMode(v)
-  }, [])
-
-  const changeView = (v: 'categories' | 'list' | 'table') => {
-    setViewMode(v)
-    try { localStorage.setItem('tx_view', v) } catch {}
-  }
 
   // Lista de meses disponibles ordenada descendentemente
   const availableMonths = useMemo(() => {
@@ -397,49 +378,6 @@ export default function TransactionsPage() {
     }
   }, [filteredTransactions])
 
-  // Agrupación por categorías (para la vista "Por Categorías")
-  const categorizedData = useMemo(() => {
-    type CategoryGroup = {
-      categoryId: string
-      categoryName: string
-      category: Category | null
-      type: 'income' | 'expense'
-      totalAmount: number
-      transactions: Transaction[]
-    }
-
-    const groupMap = new Map<string, CategoryGroup>()
-
-    filteredTransactions.forEach((tx) => {
-      const catId = tx.category_id || 'uncategorized'
-      const cat = categories.find((c) => c.id === tx.category_id) || null
-      const catName = getCategoryDisplayName(tx.category_id)
-
-      if (!groupMap.has(catId)) {
-        groupMap.set(catId, {
-          categoryId: catId,
-          categoryName: catName,
-          category: cat,
-          type: tx.type,
-          totalAmount: 0,
-          transactions: []
-        })
-      }
-
-      const grp = groupMap.get(catId)!
-      grp.totalAmount += Math.abs(tx.amount)
-      grp.transactions.push(tx)
-    })
-
-    const allGroups = Array.from(groupMap.values())
-    allGroups.sort((a, b) => b.totalAmount - a.totalAmount)
-
-    const expenseGroups = allGroups.filter(g => g.type === 'expense')
-    const incomeGroups = allGroups.filter(g => g.type === 'income')
-
-    return { expenseGroups, incomeGroups, allGroups }
-  }, [filteredTransactions, categories, getCategoryDisplayName])
-
   // Paginación de transacciones para vista lista
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage) || 1
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -450,30 +388,6 @@ export default function TransactionsPage() {
   const expenseCats = categories.filter((c) => c.type === 'expense')
   const formCats = formType === 'income' ? incomeCats : expenseCats
   const activeFilterCount = [typeFilter !== 'all', categoryFilter !== 'all', !!startDate, !!endDate].filter(Boolean).length
-
-  // Toggle de acordeón de categorías
-  const toggleCategoryAccordion = (catId: string) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [catId]: prev[catId] === undefined ? false : !prev[catId]
-    }))
-  }
-
-  const expandAllCategories = () => {
-    const nextState: Record<string, boolean> = {}
-    categorizedData.allGroups.forEach(g => {
-      nextState[g.categoryId] = true
-    })
-    setExpandedCategories(nextState)
-  }
-
-  const collapseAllCategories = () => {
-    const nextState: Record<string, boolean> = {}
-    categorizedData.allGroups.forEach(g => {
-      nextState[g.categoryId] = false
-    })
-    setExpandedCategories(nextState)
-  }
 
   // --- Editor de ítems (detalle) ---
   const addItem = () => setFormItems((p) => [...p, { description: '', amount: 0 }])
@@ -889,34 +803,6 @@ export default function TransactionsPage() {
               </button>
             )}
           </div>
-
-          {/* Selector de Modo de Visualización */}
-          <div className="grid grid-cols-3 sm:inline-flex bg-slate-950 border border-slate-800 rounded-md p-0.5 w-full md:w-auto">
-            <button
-              onClick={() => changeView('categories')}
-              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer truncate ${
-                viewMode === 'categories' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <FiFolder className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Categorías</span>
-            </button>
-            <button
-              onClick={() => changeView('list')}
-              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer truncate ${
-                viewMode === 'list' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <FiList className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Lista</span>
-            </button>
-            <button
-              onClick={() => changeView('table')}
-              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer truncate ${
-                viewMode === 'table' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <FiColumns className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Tabla</span>
-            </button>
-          </div>
         </div>
 
         {/* Resumen del Mes Seleccionado */}
@@ -1092,7 +978,7 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      {/* CONTENIDO PRINCIPAL SEGÚN LA VISTA SELECCIONADA */}
+      {/* CONTENIDO PRINCIPAL: LISTA DE MOVIMIENTOS */}
       {filteredTransactions.length === 0 ? (
         <div className="bg-slate-900 border border-slate-800 rounded-md p-12 text-center text-slate-500 space-y-3">
           <FiFolder className="w-10 h-10 mx-auto text-slate-600 mb-2" />
@@ -1112,250 +998,6 @@ export default function TransactionsPage() {
               + Agregar Movimiento
             </button>
           </div>
-        </div>
-      ) : viewMode === 'categories' ? (
-        /* ================= VISTA POR CATEGORÍAS ================= */
-        <div className="space-y-6">
-          {/* Controles de expansión masiva */}
-          <div className="flex justify-between items-center px-1">
-            <span className="text-xs font-bold text-slate-400">
-              Categorías activas en este periodo ({categorizedData.allGroups.length})
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={expandAllCategories}
-                className="text-[10px] font-bold text-slate-400 hover:text-emerald-400 px-2 py-1 bg-slate-900 border border-slate-800 rounded transition-colors cursor-pointer"
-              >
-                Expandir Todo
-              </button>
-              <button
-                type="button"
-                onClick={collapseAllCategories}
-                className="text-[10px] font-bold text-slate-400 hover:text-slate-200 px-2 py-1 bg-slate-900 border border-slate-800 rounded transition-colors cursor-pointer"
-              >
-                Colapsar Todo
-              </button>
-            </div>
-          </div>
-
-          {/* GASTOS POR CATEGORÍA */}
-          {categorizedData.expenseGroups.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-rose-400 truncate">
-                    Gastos por Categoría ({categorizedData.expenseGroups.length})
-                  </h2>
-                </div>
-                <span className="text-xs font-black text-rose-400 whitespace-nowrap ml-auto sm:ml-0">
-                  Total: -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {categorizedData.expenseGroups.map((group) => {
-                  const isExpanded = expandedCategories[group.categoryId] !== false // Default abierto
-                  const percentage = monthStats.expense > 0 ? (group.totalAmount / monthStats.expense) * 100 : 0
-
-                  return (
-                    <div key={group.categoryId} className="bg-slate-900 border border-slate-800 rounded-md overflow-hidden shadow-sm transition-all">
-                      {/* Cabecera del Acordeón de Categoría */}
-                      <button
-                        type="button"
-                        onClick={() => toggleCategoryAccordion(group.categoryId)}
-                        className="w-full p-3 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                          <CategoryIcon 
-                            icon={group.category?.icon} 
-                            name={group.categoryName} 
-                            type="expense" 
-                            size="sm" 
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
-                              <span className="text-[10px] bg-rose-500/10 text-rose-300 font-semibold px-2 py-0.2 rounded-full border border-rose-500/20 shrink-0">
-                                {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
-                              </span>
-                            </div>
-
-                            {/* Barra de progreso / porcentaje de gasto */}
-                            <div className="flex items-center gap-2 mt-1.5 max-w-xs">
-                              <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                                <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
-                              </div>
-                              <span className="text-[9px] text-slate-500 font-bold shrink-0">{percentage.toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                          <span className="text-xs sm:text-sm font-black text-rose-400 whitespace-nowrap">
-                            -${group.totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800 shrink-0">
-                            {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* Lista de Transacciones de esta Categoría */}
-                      {isExpanded && (
-                        <div className="border-t border-slate-800 bg-slate-950/40 divide-y divide-slate-850/60">
-                          {group.transactions.map((tx) => {
-                            const hasDetail = !!tx.details && tx.details.length > 0
-                            return (
-                              <div 
-                                key={tx.id} 
-                                onClick={() => setSelectedDetailTx(tx)}
-                                className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/80 transition-colors group cursor-pointer"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-200 truncate">{tx.description}</span>
-                                    {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
-                                      <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">
-                                        {tx.details![0].description}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] text-slate-500 block mt-0.5">
-                                    {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                  <span className="text-xs font-bold text-rose-400">
-                                    -${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* INGRESOS POR CATEGORÍA */}
-          {categorizedData.incomeGroups.length > 0 && (
-            <div className="space-y-3 pt-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-emerald-400 truncate">
-                    Ingresos por Categoría ({categorizedData.incomeGroups.length})
-                  </h2>
-                </div>
-                <span className="text-xs font-black text-emerald-400 whitespace-nowrap ml-auto sm:ml-0">
-                  Total: +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {categorizedData.incomeGroups.map((group) => {
-                  const isExpanded = expandedCategories[group.categoryId] !== false // Default abierto
-                  const percentage = monthStats.income > 0 ? (group.totalAmount / monthStats.income) * 100 : 0
-
-                  return (
-                    <div key={group.categoryId} className="bg-slate-900 border border-slate-800 rounded-md overflow-hidden shadow-sm transition-all">
-                      <button
-                        type="button"
-                        onClick={() => toggleCategoryAccordion(group.categoryId)}
-                        className="w-full p-3 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-3 text-left hover:bg-slate-850/60 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                          <CategoryIcon 
-                            icon={group.category?.icon} 
-                            name={group.categoryName} 
-                            type="income" 
-                            size="sm" 
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-100 truncate">{group.categoryName}</span>
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-300 font-semibold px-2 py-0.2 rounded-full border border-emerald-500/20 shrink-0">
-                                {group.transactions.length} mov{group.transactions.length > 1 ? 's' : ''}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-1.5 max-w-xs">
-                              <div className="flex-1 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, percentage)}%` }}></div>
-                              </div>
-                              <span className="text-[9px] text-slate-500 font-bold shrink-0">{percentage.toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                          <span className="text-xs sm:text-sm font-black text-emerald-400 whitespace-nowrap">
-                            +${group.totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                          <div className="p-1 text-slate-400 bg-slate-950 rounded border border-slate-800 shrink-0">
-                            {isExpanded ? <FiChevronUp className="w-3.5 h-3.5" /> : <FiChevronDown className="w-3.5 h-3.5" />}
-                          </div>
-                        </div>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="border-t border-slate-800 bg-slate-950/40 divide-y divide-slate-850/60">
-                          {group.transactions.map((tx) => {
-                            const hasDetail = !!tx.details && tx.details.length > 0
-                            return (
-                              <div 
-                                key={tx.id} 
-                                onClick={() => setSelectedDetailTx(tx)}
-                                className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/80 transition-colors group cursor-pointer"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-200 truncate">{tx.description}</span>
-                                    {hasDetail && tx.details![0]?.description.startsWith('Bolsillo:') && (
-                                      <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">
-                                        {tx.details![0].description}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] text-slate-500 block mt-0.5">
-                                    {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                  <span className="text-xs font-bold text-emerald-400">
-                                    +${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : viewMode === 'table' ? (
-        /* ================= VISTA TABLA ================= */
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 shadow-sm">
-          <TransactionsTable
-            transactions={filteredTransactions}
-            categories={categories}
-            onEdit={handleEditOpen}
-            onDelete={handleDelete}
-            onRowClick={setSelectedDetailTx}
-          />
         </div>
       ) : (
         /* ================= VISTA LISTA CRONOLÓGICA ================= */
@@ -1414,7 +1056,7 @@ export default function TransactionsPage() {
             })}
           </div>
 
-          {/* PAGINACIÓN CORREGIDA E INTELIGENTE */}
+          {/* PAGINACIÓN */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-800">
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <span>Mostrar</span>

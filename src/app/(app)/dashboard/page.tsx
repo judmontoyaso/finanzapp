@@ -616,130 +616,31 @@ export default function DashboardPage() {
         )
       })()}
 
-      {/* SECCIÓN 1: CUENTAS Y BOLSILLOS (DEL ESPACIO ACTIVO) */}
-      {(() => {
-        const activeWs = overview.find((w) => w.id === activeWsId) || overview[0]
-        const currentPockets = activeWs?.pockets || []
-
-        return (
-          <div className="bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                    Cuentas y Bolsillos · {activeWs?.name || 'Espacio Activo'}
-                  </h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Desglose de saldos y movimientos por cuenta de origen (Efectivo, Bancolombia, Nequi, etc.) dentro de este espacio.
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                href="/transactions"
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-md transition-colors shrink-0"
-              >
-                <FiPlus className="w-3.5 h-3.5" /> Nuevo Movimiento
-              </Link>
-            </div>
-
-            {currentPockets.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                {currentPockets.map((p) => {
-                  const meta = getWorkspaceAccountMeta(p.name)
-                  const Icon = meta.Icon
-
-                  return (
-                    <div
-                      key={p.name}
-                      className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md p-4 flex flex-col justify-between transition-all group"
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-2.5 mb-3">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border ${meta.colorClass}`}>
-                              <Icon className="w-4.5 h-4.5" />
-                            </span>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-slate-100 truncate leading-tight group-hover:text-white">
-                                {p.name}
-                              </p>
-                              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-0.5">
-                                {meta.label} · {p.count} movimiento{p.count === 1 ? '' : 's'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <Link
-                            href={`/transactions?pocket=${encodeURIComponent(p.name)}`}
-                            className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-emerald-400 px-2 py-1 rounded transition-colors shrink-0"
-                          >
-                            Ver Movs →
-                          </Link>
-                        </div>
-
-                        {/* Balance mensual de esta cuenta / bolsillo */}
-                        <div className="bg-slate-900/80 border border-slate-850 rounded p-3">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance del Mes</span>
-                            <span className={`text-base font-extrabold ${p.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                              ${p.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-800/60">
-                            <span>Ingresos: <strong className="text-slate-300">+${p.income.toLocaleString('es-ES')}</strong></span>
-                            <span>Gastos: <strong className="text-slate-300">-${p.expense.toLocaleString('es-ES')}</strong></span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="bg-slate-950/60 border border-slate-850 rounded-md p-6 text-center space-y-3">
-                <p className="text-xs text-slate-300 font-semibold">
-                  Aún no has registrado movimientos con cuentas o bolsillos específicos en este espacio.
-                </p>
-                <p className="text-[11px] text-slate-500 max-w-md mx-auto">
-                  Al agregar o editar un movimiento, selecciona en qué cuenta (Efectivo, Bancolombia, Nequi, Tarjeta...) se realizó para ver su balance aquí.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 pt-2">
-                  {['Efectivo', 'Bancolombia', 'Nequi', 'Tarjeta de Crédito'].map((preset) => (
-                    <Link
-                      key={preset}
-                      href={`/transactions?pocket=${encodeURIComponent(preset)}`}
-                      className="text-xs font-semibold bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-md transition-colors"
-                    >
-                      {preset}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
-      {/* SECCIÓN 2: MIS ESPACIOS (ADMINISTRADOR DE ESPACIOS) */}
+      {/* SECCIÓN: MIS ESPACIOS */}
       {overview.length > 0 && (
-        <details className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
+        <details open className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
           <summary className="list-none cursor-pointer px-5 py-4 flex items-center justify-between hover:bg-slate-850/40 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                Mis Espacios ({overview.length})
-              </h3>
-              <span className="text-[10px] text-slate-400">
-                (Cambiar, editar o crear espacios independientes)
-              </span>
+            <div className="flex items-start gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
+                    Mis Espacios
+                  </h3>
+                  <span className="text-[10px] bg-slate-950 border border-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
+                    {overview.length} espacio{overview.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Cambiar, editar o crear espacios independientes para organizar tus finanzas.
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); setIsAddAccountOpen(true); }}
-                className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold px-2.5 py-1 rounded transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-1.5 rounded transition-colors cursor-pointer shadow-xs"
               >
                 <FiPlus className="w-3.5 h-3.5" /> Nuevo Espacio
               </button>
@@ -763,37 +664,40 @@ export default function DashboardPage() {
                     }`}
                   >
                     <div>
-                      <div className="flex items-start justify-between gap-2.5 mb-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border ${meta.colorClass}`}>
-                            <Icon className="w-4.5 h-4.5" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-100 truncate leading-tight group-hover:text-white">
-                              {w.name}
-                            </p>
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-0.5">
-                              {meta.label} · {w.isOwner ? 'Dueño' : 'Compartido'}
-                            </p>
-                          </div>
+                      {/* Cabecera del espacio con icono y nombre en ancho completo */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <span className={`w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 border ${meta.colorClass}`}>
+                          <Icon className="w-5 h-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-slate-100 break-words leading-tight group-hover:text-white">
+                            {w.name}
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-1">
+                            {meta.label} · {w.isOwner ? 'Dueño' : 'Compartido'}
+                          </p>
                         </div>
+                      </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Barra de botones de acción del espacio */}
+                      <div className="flex items-center justify-between gap-1.5 mb-3 pt-2 border-t border-slate-900">
+                        <div className="flex items-center gap-1">
                           {w.isOwner && (
                             <>
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); openEditModal(w); }}
-                                className="text-[10px] font-semibold text-slate-400 hover:text-amber-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 p-1.5 rounded transition-all flex items-center gap-1 cursor-pointer"
+                                className="text-[10px] font-semibold text-slate-400 hover:text-amber-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 px-2 py-1 rounded transition-all flex items-center gap-1 cursor-pointer"
                                 title="Editar nombre y tipo de espacio"
                               >
                                 <FiEdit2 className="w-3 h-3" />
+                                <span>Editar</span>
                               </button>
                               {overview.length > 1 && (
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setDeletingWs(w); }}
-                                  className="text-[10px] font-semibold text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/40 p-1.5 rounded transition-all flex items-center gap-1 cursor-pointer"
+                                  className="text-[10px] font-semibold text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/40 p-1 rounded transition-all flex items-center gap-1 cursor-pointer"
                                   title="Eliminar este espacio"
                                 >
                                   <FiTrash2 className="w-3 h-3" />
@@ -806,7 +710,7 @@ export default function DashboardPage() {
                                 title="Compartir este espacio"
                               >
                                 <FiUsers className="w-3 h-3 text-emerald-500" />
-                                <span className="hidden xl:inline">Compartir</span>
+                                <span>Compartir</span>
                               </button>
                             </>
                           )}
@@ -815,22 +719,23 @@ export default function DashboardPage() {
                               <FiUsers className="w-2.5 h-2.5" /> Compartida
                             </span>
                           )}
-
-                          {isActive ? (
-                            <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full uppercase shrink-0">
-                              Activo
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2 py-1 rounded transition-colors shrink-0">
-                              Abrir
-                            </span>
-                          )}
                         </div>
+
+                        {isActive ? (
+                          <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase shrink-0">
+                            Activo
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2.5 py-1 rounded transition-colors shrink-0">
+                            Abrir
+                          </span>
+                        )}
                       </div>
 
+                      {/* Balance global del mes */}
                       <div className="bg-slate-900/80 border border-slate-850 rounded p-3">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance Global del Mes</span>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance del Mes</span>
                           <span className={`text-base font-extrabold ${w.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             ${w.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                           </span>
