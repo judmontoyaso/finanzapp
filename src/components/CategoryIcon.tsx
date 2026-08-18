@@ -56,7 +56,7 @@ export default function CategoryIcon({
         containerSizeClasses[size]
       } ${resolved.bgClass} ${className}`}
     >
-      <IconComponent className={`${iconSizeClasses[size]} shrink-0`} />
+      <IconComponent className={`${iconSizeClasses[size]} text-white shrink-0`} />
     </div>
   )
 }
