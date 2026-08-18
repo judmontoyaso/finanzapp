@@ -94,7 +94,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaUtensils,
     keywords: ['restaurante', 'comida', 'cenas', 'almuerzo', 'desayuno', 'chef', 'plato', 'gastronomia'],
     color: 'orange',
-    bgClass: 'bg-orange-500/25 text-white border-orange-500/35',
+    bgClass: 'bg-orange-500/75 text-white border-orange-400/40',
     textClass: 'text-orange-400'
   },
   {
@@ -104,7 +104,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBasketShopping,
     keywords: ['mercado', 'supermercado', 'viveres', 'tienda', 'despensa', 'mercaderia', 'exito', 'jumbo', 'carulla', 'd1', 'ara'],
     color: 'amber',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-amber-400'
   },
   {
@@ -114,7 +114,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaMugHot,
     keywords: ['cafe', 'cafeteria', 'starbucks', 'juan valdez', 'panaderia', 'desayuno', 'coffee', 'te'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-300'
   },
   {
@@ -124,7 +124,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBurger,
     keywords: ['hamburguesa', 'comida rapida', 'mcdonalds', 'burger', 'domicilio', 'rappi'],
     color: 'yellow',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-yellow-400'
   },
   {
@@ -134,7 +134,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPizzaSlice,
     keywords: ['pizza', 'pizzeria', 'italiana'],
     color: 'orange',
-    bgClass: 'bg-orange-600/25 text-white border-orange-600/35',
+    bgClass: 'bg-orange-600/75 text-white border-orange-500/40',
     textClass: 'text-orange-400'
   },
   {
@@ -144,7 +144,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaAppleWhole,
     keywords: ['fruta', 'verdura', 'saludable', 'organico', 'nutricion', 'dieta'],
     color: 'emerald',
-    bgClass: 'bg-emerald-600/25 text-white border-emerald-600/35',
+    bgClass: 'bg-emerald-600/75 text-white border-emerald-500/40',
     textClass: 'text-emerald-400'
   },
   {
@@ -154,7 +154,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBeerMugEmpty,
     keywords: ['bar', 'cerveza', 'trago', 'pub', 'licor', 'discoteca', 'fiesta', 'beers'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -164,7 +164,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaWineGlass,
     keywords: ['vino', 'licores', 'champagne', 'copa', 'coctel'],
     color: 'rose',
-    bgClass: 'bg-rose-600/25 text-white border-rose-600/35',
+    bgClass: 'bg-rose-600/75 text-white border-rose-500/40',
     textClass: 'text-rose-400'
   },
   {
@@ -174,7 +174,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaIceCream,
     keywords: ['postre', 'helado', 'dulce', 'golosinas', 'snack'],
     color: 'pink',
-    bgClass: 'bg-pink-500/25 text-white border-pink-500/35',
+    bgClass: 'bg-pink-500/75 text-white border-pink-400/40',
     textClass: 'text-pink-400'
   },
 
@@ -186,7 +186,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaCar,
     keywords: ['carro', 'auto', 'vehiculo', 'coche', 'automovil', 'transporte'],
     color: 'sky',
-    bgClass: 'bg-sky-500/25 text-white border-sky-500/35',
+    bgClass: 'bg-sky-500/75 text-white border-sky-400/40',
     textClass: 'text-sky-400'
   },
   {
@@ -196,7 +196,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaGasPump,
     keywords: ['gasolina', 'combustible', 'tanquear', 'estacion', 'terpel', 'primax', 'esso'],
     color: 'amber',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-amber-400'
   },
   {
@@ -206,7 +206,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaTaxi,
     keywords: ['taxi', 'uber', 'didi', 'cabify', 'inDrive', 'conductor', 'viaje urbano'],
     color: 'yellow',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-yellow-400'
   },
   {
@@ -216,7 +216,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBus,
     keywords: ['bus', 'transmilenio', 'sitp', 'colectivo', 'pasaje', 'transporte publico'],
     color: 'blue',
-    bgClass: 'bg-blue-600/25 text-white border-blue-600/35',
+    bgClass: 'bg-blue-600/75 text-white border-blue-500/40',
     textClass: 'text-blue-400'
   },
   {
@@ -226,7 +226,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaTrain,
     keywords: ['metro', 'tren', 'ferrocarril', 'tranvia', 'estacion de metro'],
     color: 'cyan',
-    bgClass: 'bg-cyan-600/25 text-white border-cyan-600/35',
+    bgClass: 'bg-cyan-600/75 text-white border-cyan-500/40',
     textClass: 'text-cyan-400'
   },
   {
@@ -236,7 +236,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPlane,
     keywords: ['avion', 'vuelo', 'aeropuerto', 'tiquetes', 'avianca', 'latam', 'viaje'],
     color: 'indigo',
-    bgClass: 'bg-indigo-600/25 text-white border-indigo-600/35',
+    bgClass: 'bg-indigo-600/75 text-white border-indigo-500/40',
     textClass: 'text-indigo-400'
   },
   {
@@ -246,7 +246,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaMotorcycle,
     keywords: ['moto', 'motocicleta', 'soat', 'peaje moto'],
     color: 'orange',
-    bgClass: 'bg-orange-500/25 text-white border-orange-500/35',
+    bgClass: 'bg-orange-500/75 text-white border-orange-400/40',
     textClass: 'text-orange-400'
   },
   {
@@ -256,7 +256,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBicycle,
     keywords: ['bici', 'bicicleta', 'cicloruta', 'repuestos bici'],
     color: 'emerald',
-    bgClass: 'bg-emerald-600/25 text-white border-emerald-600/35',
+    bgClass: 'bg-emerald-600/75 text-white border-emerald-500/40',
     textClass: 'text-emerald-400'
   },
   {
@@ -266,7 +266,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaSquareParking,
     keywords: ['parqueadero', 'estacionamiento', 'valet', 'parking'],
     color: 'blue',
-    bgClass: 'bg-blue-600/25 text-white border-blue-600/35',
+    bgClass: 'bg-blue-600/75 text-white border-blue-500/40',
     textClass: 'text-blue-400'
   },
   {
@@ -276,7 +276,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaWrench,
     keywords: ['taller', 'mantenimiento', 'mecanico', 'repuestos', 'lavado', 'revision', 'tecnomecanica'],
     color: 'slate',
-    bgClass: 'bg-slate-700/40 text-white border-slate-600/40',
+    bgClass: 'bg-slate-700/80 text-white border-slate-600/50',
     textClass: 'text-slate-300'
   },
 
@@ -288,7 +288,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaHouse,
     keywords: ['casa', 'hogar', 'vivienda', 'arriendo', 'alquiler', 'hipoteca', 'cuota casa', 'residencia'],
     color: 'indigo',
-    bgClass: 'bg-indigo-600/25 text-white border-indigo-600/35',
+    bgClass: 'bg-indigo-600/75 text-white border-indigo-500/40',
     textClass: 'text-indigo-400'
   },
   {
@@ -298,7 +298,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBuilding,
     keywords: ['apto', 'apartamento', 'administracion', 'edificio', 'condominio', 'conjunto'],
     color: 'cyan',
-    bgClass: 'bg-cyan-600/25 text-white border-cyan-600/35',
+    bgClass: 'bg-cyan-600/75 text-white border-cyan-500/40',
     textClass: 'text-cyan-400'
   },
   {
@@ -308,7 +308,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBolt,
     keywords: ['luz', 'electricidad', 'energia', 'enel', 'epm', 'servicio publico'],
     color: 'yellow',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-yellow-400'
   },
   {
@@ -318,7 +318,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaDroplet,
     keywords: ['agua', 'acueducto', 'alcantarillado'],
     color: 'sky',
-    bgClass: 'bg-sky-600/25 text-white border-sky-600/35',
+    bgClass: 'bg-sky-600/75 text-white border-sky-600/40',
     textClass: 'text-sky-400'
   },
   {
@@ -328,7 +328,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaFire,
     keywords: ['gas', 'gas natural', 'gasodomesticos'],
     color: 'orange',
-    bgClass: 'bg-orange-500/25 text-white border-orange-500/35',
+    bgClass: 'bg-orange-500/75 text-white border-orange-400/40',
     textClass: 'text-orange-400'
   },
   {
@@ -338,7 +338,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaWifi,
     keywords: ['internet', 'wifi', 'claro', 'tigo', 'movistar', 'fibra', 'red'],
     color: 'teal',
-    bgClass: 'bg-teal-600/25 text-white border-teal-600/35',
+    bgClass: 'bg-teal-600/75 text-white border-teal-500/40',
     textClass: 'text-teal-400'
   },
   {
@@ -348,7 +348,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaTv,
     keywords: ['tv', 'television', 'cable', 'directv', 'pantalla', 'netflix', 'disney'],
     color: 'red',
-    bgClass: 'bg-rose-600/25 text-white border-rose-600/35',
+    bgClass: 'bg-rose-600/75 text-white border-rose-500/40',
     textClass: 'text-red-400'
   },
   {
@@ -358,7 +358,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaCouch,
     keywords: ['muebles', 'decoracion', 'sala', 'cama', 'ikea', 'homecenter'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -368,7 +368,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBroom,
     keywords: ['aseo', 'limpieza', 'detergente', 'empleada', 'servicio domestico'],
     color: 'teal',
-    bgClass: 'bg-teal-600/25 text-white border-teal-600/35',
+    bgClass: 'bg-teal-600/75 text-white border-teal-500/40',
     textClass: 'text-teal-400'
   },
   {
@@ -378,7 +378,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaKey,
     keywords: ['arriendo', 'inquilino', 'llaves', 'deposito', 'alquiler'],
     color: 'yellow',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-yellow-400'
   },
 
@@ -390,7 +390,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaMoneyBillWave,
     keywords: ['efectivo', 'dinero', 'plata', 'cash', 'retiro', 'cajero', 'moneda'],
     color: 'emerald',
-    bgClass: 'bg-emerald-600/25 text-white border-emerald-600/35',
+    bgClass: 'bg-emerald-600/75 text-white border-emerald-500/40',
     textClass: 'text-emerald-400'
   },
   {
@@ -400,7 +400,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaWallet,
     keywords: ['salario', 'sueldo', 'nomina', 'quincena', 'pago', 'honorarios', 'billetera'],
     color: 'emerald',
-    bgClass: 'bg-emerald-600/25 text-white border-emerald-600/35',
+    bgClass: 'bg-emerald-600/75 text-white border-emerald-500/40',
     textClass: 'text-emerald-400'
   },
   {
@@ -410,7 +410,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaCoins,
     keywords: ['monedas', 'cambio', 'propinas', 'ingresos varios'],
     color: 'yellow',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-yellow-400'
   },
   {
@@ -420,7 +420,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaCreditCard,
     keywords: ['tarjeta', 'credito', 'debito', 'visa', 'mastercard', 'amex', 'cuotas'],
     color: 'purple',
-    bgClass: 'bg-purple-600/25 text-white border-purple-600/35',
+    bgClass: 'bg-purple-600/75 text-white border-purple-500/40',
     textClass: 'text-purple-400'
   },
   {
@@ -430,7 +430,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBuildingColumns,
     keywords: ['banco', 'transferencia', 'bancolombia', 'davivienda', 'bbva', 'nequi', 'daviplata'],
     color: 'blue',
-    bgClass: 'bg-blue-600/25 text-white border-blue-600/35',
+    bgClass: 'bg-blue-600/75 text-white border-blue-500/40',
     textClass: 'text-blue-400'
   },
   {
@@ -440,7 +440,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPiggyBank,
     keywords: ['ahorro', 'alcancia', 'fondo', 'reserva', 'guardadito', 'ahorros'],
     color: 'pink',
-    bgClass: 'bg-pink-600/25 text-white border-pink-600/35',
+    bgClass: 'bg-pink-600/75 text-white border-pink-500/40',
     textClass: 'text-pink-400'
   },
   {
@@ -450,7 +450,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaArrowTrendUp,
     keywords: ['inversion', 'inversiones', 'rendimientos', 'acciones', 'bolsa', 'fiducia', 'cdts', 'dividendos', 'crypto', 'bitcoin'],
     color: 'emerald',
-    bgClass: 'bg-emerald-600/25 text-white border-emerald-600/35',
+    bgClass: 'bg-emerald-600/75 text-white border-emerald-500/40',
     textClass: 'text-emerald-400'
   },
   {
@@ -460,7 +460,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaReceipt,
     keywords: ['factura', 'recibo', 'cuenta', 'comprobante'],
     color: 'slate',
-    bgClass: 'bg-slate-700/40 text-white border-slate-600/40',
+    bgClass: 'bg-slate-700/80 text-white border-slate-600/50',
     textClass: 'text-slate-300'
   },
   {
@@ -470,7 +470,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPercent,
     keywords: ['impuestos', 'dian', 'retencion', 'iva', 'predial', 'renta', 'gravamen'],
     color: 'rose',
-    bgClass: 'bg-rose-600/25 text-white border-rose-600/35',
+    bgClass: 'bg-rose-600/75 text-white border-rose-500/40',
     textClass: 'text-rose-400'
   },
   {
@@ -480,7 +480,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaHandHoldingDollar,
     keywords: ['prestamo', 'deuda', 'intereses', 'hipoteca', 'credito personal', 'cuota'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -490,7 +490,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBriefcase,
     keywords: ['trabajo', 'empleo', 'empresa', 'oficina', 'cliente', 'consultoria'],
     color: 'blue',
-    bgClass: 'bg-blue-600/25 text-white border-blue-600/35',
+    bgClass: 'bg-blue-600/75 text-white border-blue-500/40',
     textClass: 'text-blue-400'
   },
   {
@@ -500,7 +500,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaShop,
     keywords: ['ventas', 'negocio', 'comercio', 'local', 'facturacion', 'tienda propia'],
     color: 'teal',
-    bgClass: 'bg-teal-600/25 text-white border-teal-600/35',
+    bgClass: 'bg-teal-600/75 text-white border-teal-500/40',
     textClass: 'text-teal-400'
   },
 
@@ -512,7 +512,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaHeartPulse,
     keywords: ['salud', 'medico', 'consulta', 'eps', 'medicina prepagada', 'bienestar', 'clinica'],
     color: 'rose',
-    bgClass: 'bg-rose-600/25 text-white border-rose-600/35',
+    bgClass: 'bg-rose-600/75 text-white border-rose-500/40',
     textClass: 'text-rose-400'
   },
   {
@@ -522,7 +522,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPills,
     keywords: ['farmacia', 'drogueria', 'medicamentos', 'pastillas', 'receta', 'remedios'],
     color: 'cyan',
-    bgClass: 'bg-cyan-600/25 text-white border-cyan-600/35',
+    bgClass: 'bg-cyan-600/75 text-white border-cyan-500/40',
     textClass: 'text-cyan-400'
   },
   {
@@ -532,7 +532,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaHospital,
     keywords: ['hospital', 'urgencias', 'cirugia', 'laboratorio', 'examenes'],
     color: 'red',
-    bgClass: 'bg-red-600/25 text-white border-red-600/35',
+    bgClass: 'bg-red-600/75 text-white border-red-500/40',
     textClass: 'text-red-400'
   },
   {
@@ -542,7 +542,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaTooth,
     keywords: ['odontologia', 'dentista', 'dientes', 'ortodoncia', 'limpieza dental'],
     color: 'sky',
-    bgClass: 'bg-sky-600/25 text-white border-sky-600/35',
+    bgClass: 'bg-sky-600/75 text-white border-sky-500/40',
     textClass: 'text-sky-400'
   },
   {
@@ -552,7 +552,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaGlasses,
     keywords: ['optica', 'gafas', 'lentes', 'oftalmologia', 'ojos'],
     color: 'indigo',
-    bgClass: 'bg-indigo-600/25 text-white border-indigo-600/35',
+    bgClass: 'bg-indigo-600/75 text-white border-indigo-500/40',
     textClass: 'text-indigo-400'
   },
   {
@@ -562,7 +562,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaDumbbell,
     keywords: ['gimnasio', 'gym', 'smartfit', 'fitness', 'entrenamiento', 'pesas', 'suplementos'],
     color: 'orange',
-    bgClass: 'bg-orange-500/25 text-white border-orange-500/35',
+    bgClass: 'bg-orange-500/75 text-white border-orange-400/40',
     textClass: 'text-orange-400'
   },
   {
@@ -572,7 +572,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPersonRunning,
     keywords: ['deporte', 'ejercicio', 'running', 'futbol', 'ciclismo', 'tenis', 'natacion'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -582,7 +582,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaSpa,
     keywords: ['spa', 'masaje', 'cuidado personal', 'skincare', 'estetica', 'relax'],
     color: 'purple',
-    bgClass: 'bg-purple-600/25 text-white border-purple-600/35',
+    bgClass: 'bg-purple-600/75 text-white border-purple-500/40',
     textClass: 'text-purple-400'
   },
   {
@@ -592,7 +592,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaScissors,
     keywords: ['peluqueria', 'barberia', 'corte', 'cabello', 'unas', 'manicure'],
     color: 'pink',
-    bgClass: 'bg-pink-600/25 text-white border-pink-600/35',
+    bgClass: 'bg-pink-600/75 text-white border-pink-500/40',
     textClass: 'text-pink-400'
   },
 
@@ -604,7 +604,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaGamepad,
     keywords: ['videojuegos', 'gaming', 'playstation', 'xbox', 'nintendo', 'steam', 'juegos'],
     color: 'violet',
-    bgClass: 'bg-violet-600/25 text-white border-violet-600/35',
+    bgClass: 'bg-violet-600/75 text-white border-violet-500/40',
     textClass: 'text-violet-400'
   },
   {
@@ -614,7 +614,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaFilm,
     keywords: ['cine', 'peliculas', 'cinecolombia', 'cinemark', 'estreno'],
     color: 'red',
-    bgClass: 'bg-rose-600/25 text-white border-rose-600/35',
+    bgClass: 'bg-rose-600/75 text-white border-rose-500/40',
     textClass: 'text-red-400'
   },
   {
@@ -624,7 +624,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaMusic,
     keywords: ['musica', 'spotify', 'apple music', 'concierto', 'festival', 'boletas'],
     color: 'emerald',
-    bgClass: 'bg-emerald-600/25 text-white border-emerald-600/35',
+    bgClass: 'bg-emerald-600/75 text-white border-emerald-500/40',
     textClass: 'text-emerald-400'
   },
   {
@@ -634,7 +634,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaTicket,
     keywords: ['eventos', 'boletas', 'entradas', 'teatro', 'show', 'tuboleta'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -644,7 +644,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaGift,
     keywords: ['regalo', 'cumpleanos', 'navidad', 'aniversario', 'donacion', 'detalle'],
     color: 'pink',
-    bgClass: 'bg-pink-600/25 text-white border-pink-600/35',
+    bgClass: 'bg-pink-600/75 text-white border-pink-500/40',
     textClass: 'text-pink-400'
   },
   {
@@ -654,7 +654,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaShirt,
     keywords: ['ropa', 'vestuario', 'moda', 'zapatos', 'calzado', 'zara', 'h&m'],
     color: 'purple',
-    bgClass: 'bg-purple-600/25 text-white border-purple-600/35',
+    bgClass: 'bg-purple-600/75 text-white border-purple-500/40',
     textClass: 'text-purple-400'
   },
   {
@@ -664,7 +664,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBagShopping,
     keywords: ['compras', 'shopping', 'centro comercial', 'amazon', 'aliexpress', 'mercadolibre'],
     color: 'fuchsia',
-    bgClass: 'bg-fuchsia-600/25 text-white border-fuchsia-600/35',
+    bgClass: 'bg-fuchsia-600/75 text-white border-fuchsia-500/40',
     textClass: 'text-fuchsia-400'
   },
   {
@@ -674,7 +674,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaCamera,
     keywords: ['fotografia', 'foto', 'camara', 'arte', 'diseno'],
     color: 'cyan',
-    bgClass: 'bg-cyan-600/25 text-white border-cyan-600/35',
+    bgClass: 'bg-cyan-600/75 text-white border-cyan-500/40',
     textClass: 'text-cyan-400'
   },
 
@@ -686,7 +686,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaGraduationCap,
     keywords: ['educacion', 'universidad', 'colegio', 'matricula', 'semestre', 'diplomado'],
     color: 'blue',
-    bgClass: 'bg-blue-600/25 text-white border-blue-600/35',
+    bgClass: 'bg-blue-600/75 text-white border-blue-500/40',
     textClass: 'text-blue-400'
   },
   {
@@ -696,7 +696,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBook,
     keywords: ['libros', 'cursos', 'platzi', 'udemy', 'capacitacion', 'lectura', 'estudio'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -706,7 +706,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaLaptop,
     keywords: ['computador', 'tecnologia', 'software', 'hardware', 'apple', 'laptop', 'programas'],
     color: 'cyan',
-    bgClass: 'bg-cyan-600/25 text-white border-cyan-600/35',
+    bgClass: 'bg-cyan-600/75 text-white border-cyan-500/40',
     textClass: 'text-cyan-400'
   },
   {
@@ -716,7 +716,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaMobileScreen,
     keywords: ['celular', 'telefono', 'plan movil', 'recargas', 'smartphone', 'datos'],
     color: 'sky',
-    bgClass: 'bg-sky-600/25 text-white border-sky-600/35',
+    bgClass: 'bg-sky-600/75 text-white border-sky-500/40',
     textClass: 'text-sky-400'
   },
   {
@@ -726,7 +726,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPenNib,
     keywords: ['papeleria', 'utiles', 'cuadernos', 'fotocopias', 'impresion'],
     color: 'teal',
-    bgClass: 'bg-teal-600/25 text-white border-teal-600/35',
+    bgClass: 'bg-teal-600/75 text-white border-teal-500/40',
     textClass: 'text-teal-400'
   },
 
@@ -738,7 +738,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPaw,
     keywords: ['mascotas', 'perro', 'gato', 'veterinaria', 'cleo', 'pet', 'purina', 'concentrado'],
     color: 'amber',
-    bgClass: 'bg-amber-600/25 text-white border-amber-600/35',
+    bgClass: 'bg-amber-600/75 text-white border-amber-500/40',
     textClass: 'text-amber-400'
   },
   {
@@ -748,7 +748,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaBaby,
     keywords: ['bebe', 'hijos', 'panales', 'guarderia', 'pediatra', 'juguetes'],
     color: 'pink',
-    bgClass: 'bg-pink-600/25 text-white border-pink-600/35',
+    bgClass: 'bg-pink-600/75 text-white border-pink-500/40',
     textClass: 'text-pink-400'
   },
   {
@@ -758,7 +758,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaPeopleRoof,
     keywords: ['familia', 'padres', 'hermanos', 'apoyo familiar', 'casa familiar'],
     color: 'indigo',
-    bgClass: 'bg-indigo-600/25 text-white border-indigo-600/35',
+    bgClass: 'bg-indigo-600/75 text-white border-indigo-500/40',
     textClass: 'text-indigo-400'
   },
   {
@@ -768,7 +768,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaHeart,
     keywords: ['donacion', 'caridad', 'pareja', 'novios', 'amor'],
     color: 'rose',
-    bgClass: 'bg-rose-600/25 text-white border-rose-600/35',
+    bgClass: 'bg-rose-600/75 text-white border-rose-500/40',
     textClass: 'text-rose-400'
   },
   {
@@ -778,7 +778,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaUmbrella,
     keywords: ['seguro', 'seguros', 'poliza', 'sura', 'seguro de vida', 'seguro hogar'],
     color: 'sky',
-    bgClass: 'bg-sky-600/25 text-white border-sky-600/35',
+    bgClass: 'bg-sky-600/75 text-white border-sky-500/40',
     textClass: 'text-sky-400'
   },
   {
@@ -788,7 +788,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaShieldHalved,
     keywords: ['seguridad', 'vigilancia', 'alarma', 'proteccion'],
     color: 'blue',
-    bgClass: 'bg-blue-600/25 text-white border-blue-600/35',
+    bgClass: 'bg-blue-600/75 text-white border-blue-500/40',
     textClass: 'text-blue-400'
   },
   {
@@ -798,7 +798,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaStar,
     keywords: ['favorito', 'destacado', 'especial', 'importante'],
     color: 'yellow',
-    bgClass: 'bg-amber-500/25 text-white border-amber-500/35',
+    bgClass: 'bg-amber-500/75 text-white border-amber-400/40',
     textClass: 'text-yellow-400'
   },
   {
@@ -808,7 +808,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaTag,
     keywords: ['etiqueta', 'otros', 'varios', 'miscelaneos', 'general'],
     color: 'slate',
-    bgClass: 'bg-slate-700/40 text-white border-slate-600/40',
+    bgClass: 'bg-slate-700/85 text-white border-slate-600/50',
     textClass: 'text-slate-300'
   },
   {
@@ -818,7 +818,7 @@ export const CATEGORY_ICON_LIST: CategoryIconItem[] = [
     icon: FaFolder,
     keywords: ['carpeta', 'categoria', 'archivo', 'modulo'],
     color: 'slate',
-    bgClass: 'bg-slate-700/40 text-white border-slate-600/40',
+    bgClass: 'bg-slate-700/85 text-white border-slate-600/50',
     textClass: 'text-slate-300'
   },
 ]
@@ -868,7 +868,7 @@ export function resolveCategoryIcon(category?: { name?: string; icon?: string | 
     icon: FaFolder,
     keywords: [],
     color: 'slate',
-    bgClass: 'bg-slate-700/40 text-white border-slate-600/40',
+    bgClass: 'bg-slate-700/85 text-white border-slate-600/50',
     textClass: 'text-slate-300'
   }
 
