@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { LocalDB } from '@/lib/db'
 import { Transaction, Category, Budget, RecurringTransaction, WorkspaceOverview } from '@/types'
 import DashboardCharts from '@/components/DashboardCharts'
-import { wsTypeMeta } from '@/lib/workspaceMeta'
+import { getWorkspaceAccountMeta } from '@/lib/workspaceMeta'
 import {
   FiPlus,
   FiRepeat,
@@ -16,29 +16,9 @@ import {
   FiMove,
   FiCheck
 } from 'react-icons/fi'
-import {
-  FaWallet,
-  FaCreditCard,
-  FaBuildingColumns,
-  FaMoneyBillWave,
-  FaPiggyBank,
-  FaArrowTrendUp,
-  FaMobileScreen
-} from 'react-icons/fa6'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-
-function getPocketIcon(name: string) {
-  const n = name.toLowerCase()
-  if (n.includes('efectivo') || n.includes('cash') || n.includes('plata') || n.includes('billetera')) return FaMoneyBillWave
-  if (n.includes('banco') || n.includes('bancolombia') || n.includes('davivienda') || n.includes('bbva') || n.includes('cuenta')) return FaBuildingColumns
-  if (n.includes('nequi') || n.includes('daviplata') || n.includes('movil') || n.includes('celular') || n.includes('app')) return FaMobileScreen
-  if (n.includes('tarjeta') || n.includes('credito') || n.includes('debito') || n.includes('card') || n.includes('visa') || n.includes('mastercard')) return FaCreditCard
-  if (n.includes('ahorro') || n.includes('alcancia') || n.includes('piggy')) return FaPiggyBank
-  if (n.includes('inversion') || n.includes('fiducia') || n.includes('cdt') || n.includes('bolsa') || n.includes('crypto')) return FaArrowTrendUp
-  return FaWallet
-}
 
 const DEFAULT_ORDER = ['metrics', 'summary', 'forecast', 'charts', 'budgets', 'activity']
 
@@ -450,48 +430,48 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* MIS ESPACIOS DE TRABAJO Y CUENTAS / BOLSILLOS */}
+      {/* MIS CUENTAS Y BOLSILLOS (ESPACIOS DE TRABAJO) */}
       {overview.length > 0 && (
         <details open className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
           <summary className="list-none cursor-pointer px-5 py-4 flex items-center justify-between hover:bg-slate-850/40 transition-colors">
             <div className="flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                Mis Espacios de Trabajo y Cuentas / Bolsillos
+                Mis Cuentas y Bolsillos (Espacios de Trabajo)
               </h3>
               <span className="text-[10px] bg-slate-950 border border-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
-                {overview.length} espacio{overview.length > 1 ? 's' : ''}
+                {overview.length} cuenta{overview.length > 1 ? 's' : ''} / bolsillo{overview.length > 1 ? 's' : ''}
               </span>
             </div>
             <FiChevronDown className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" />
           </summary>
 
-          <div className="px-5 pb-5 pt-1 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="px-5 pb-5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {overview.map((w) => {
-                const meta = wsTypeMeta(w.type)
+                const meta = getWorkspaceAccountMeta(w.name, w.type)
                 const Icon = meta.Icon
                 const isActive = w.id === activeWsId
-                const pockets = w.pockets || []
 
                 return (
                   <div
                     key={w.id}
-                    className={`bg-slate-950 border rounded-md p-4 flex flex-col justify-between transition-all ${
-                      isActive ? 'border-emerald-500/80 shadow-xs' : 'border-slate-800 hover:border-slate-700'
+                    onClick={() => switchWorkspace(w.id)}
+                    className={`bg-slate-950 border rounded-md p-4 flex flex-col justify-between transition-all cursor-pointer group ${
+                      isActive ? 'border-emerald-500 ring-1 ring-emerald-500/30 shadow-xs' : 'border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     <div>
-                      {/* Cabecera del espacio */}
+                      {/* Cabecera de la cuenta / bolsillo */}
                       <div className="flex items-start justify-between gap-2.5 mb-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 ${
-                            isActive ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-400 border border-slate-800'
-                          }`}>
+                          <span className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border ${meta.colorClass}`}>
                             <Icon className="w-4.5 h-4.5" />
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-100 truncate leading-tight">{w.name}</p>
+                            <p className="text-sm font-bold text-slate-100 truncate leading-tight group-hover:text-white">
+                              {w.name}
+                            </p>
                             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-0.5">
                               {meta.label} · {w.isOwner ? 'Dueño' : 'Compartido'}
                             </p>
@@ -503,73 +483,24 @@ export default function DashboardPage() {
                             Activo
                           </span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => switchWorkspace(w.id)}
-                            className="text-[10px] font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0"
-                          >
-                            Cambiar
-                          </button>
+                          <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2 py-0.5 rounded transition-colors shrink-0">
+                            Seleccionar
+                          </span>
                         )}
                       </div>
 
-                      {/* Balance mensual del espacio */}
-                      <div className="bg-slate-900/70 border border-slate-850 rounded p-2.5 mb-3">
+                      {/* Balance mensual de esta cuenta / bolsillo */}
+                      <div className="bg-slate-900/80 border border-slate-850 rounded p-3">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance Mes</span>
-                          <span className={`font-extrabold ${w.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance del Mes</span>
+                          <span className={`text-base font-extrabold ${w.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             ${w.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1">
-                          <span>Ing: +${w.income.toLocaleString('es-ES')}</span>
-                          <span>Gas: -${w.expense.toLocaleString('es-ES')}</span>
+                        <div className="flex justify-between items-center text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-800/60">
+                          <span>Ingresos: <strong className="text-slate-300">+${w.income.toLocaleString('es-ES')}</strong></span>
+                          <span>Gastos: <strong className="text-slate-300">-${w.expense.toLocaleString('es-ES')}</strong></span>
                         </div>
-                      </div>
-
-                      {/* Desglose de Cuentas y Bolsillos de este espacio */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          <span>Cuentas / Bolsillos</span>
-                          <span className="text-slate-500 font-normal">({pockets.length})</span>
-                        </div>
-
-                        {pockets.length === 0 ? (
-                          <div className="text-[11px] text-slate-500 italic bg-slate-900/40 p-2 rounded border border-slate-850 text-center">
-                            Cuenta principal única
-                          </div>
-                        ) : (
-                          <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-0.5">
-                            {pockets.map((p) => {
-                              const PocketIconComp = getPocketIcon(p.name)
-                              return (
-                                <div
-                                  key={p.name}
-                                  onClick={() => switchWorkspace(w.id)}
-                                  className="flex items-center justify-between bg-slate-900/50 hover:bg-slate-900 border border-slate-850/80 hover:border-slate-700 rounded p-2 text-xs transition-colors cursor-pointer group"
-                                  title={`Espacio: ${w.name} · Cuenta: ${p.name}`}
-                                >
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className="w-6 h-6 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-emerald-400 shrink-0 group-hover:border-emerald-500/40">
-                                      <PocketIconComp className="w-3 h-3" />
-                                    </span>
-                                    <span className="text-slate-300 font-semibold truncate group-hover:text-white">
-                                      {p.name}
-                                    </span>
-                                  </div>
-                                  <div className="text-right shrink-0 ml-2">
-                                    <span className={`text-[11px] font-bold block ${p.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                      ${p.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                    </span>
-                                    <span className="text-[9px] text-slate-500 font-medium">
-                                      {p.count} mov{p.count !== 1 ? 's' : ''}
-                                    </span>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

@@ -311,7 +311,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {workspaces.map((ws) => (
                 <option key={ws.id} value={ws.id}>{ws.name}</option>
               ))}
-              <option value="__new__">+ Crear espacio de trabajo</option>
+              <option value="__new__">+ Nueva cuenta / espacio...</option>
             </select>
             {canShare && (
               <button
@@ -569,18 +569,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-slate-100 mb-1">Crear Espacio de Trabajo</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-1">Nueva Cuenta / Bolsillo (Espacio de Trabajo)</h2>
             <p className="text-xs text-slate-400 mb-6">
-              Los espacios de trabajo te permiten separar tus finanzas personales de las de un negocio u otro proyecto.
+              Cada cuenta o bolsillo (ej. Bancolombia, Nequi, Efectivo, Negocio, Ahorros) es un espacio de trabajo independiente para organizar tus ingresos, gastos y presupuestos.
             </p>
 
             <form onSubmit={handleCreateWorkspace} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nombre del Espacio</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nombre de la Cuenta / Espacio</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Negocio, Casa, Inversiones..."
+                  placeholder="Ej. Bancolombia, Nequi, Efectivo, Ahorros, Negocio..."
                   value={newWsName}
                   onChange={(e) => setNewWsName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
@@ -589,7 +589,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Espacio</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Cuenta / Espacio</label>
                 <div className="grid grid-cols-2 gap-2">
                   {WS_TYPES.map((t) => {
                     const selected = newWsType === t.value
@@ -615,7 +615,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   })}
                 </div>
                 <p className="mt-2 text-[10px] text-slate-500">
-                  Se crearán categorías sugeridas según el tipo. Los espacios <span className="font-semibold">Personal</span> no se pueden compartir.
+                  Se crearán categorías sugeridas según el tipo.
                 </p>
               </div>
 
@@ -631,7 +631,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   type="submit"
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all"
                 >
-                  <span className="flex items-center gap-1.5"><FiPlus className="w-3.5 h-3.5" /> Crear Espacio</span>
+                  <span className="flex items-center gap-1.5"><FiPlus className="w-3.5 h-3.5" /> Crear Cuenta</span>
                 </button>
               </div>
             </form>
