@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { LocalDB } from '@/lib/db'
+import toast from 'react-hot-toast'
+import { LocalDB, WorkspaceType } from '@/lib/db'
 import { Transaction, Category, Budget, RecurringTransaction, WorkspaceOverview } from '@/types'
 import DashboardCharts from '@/components/DashboardCharts'
-import { getWorkspaceAccountMeta } from '@/lib/workspaceMeta'
+import { getWorkspaceAccountMeta, WS_TYPES } from '@/lib/workspaceMeta'
 import {
   FiPlus,
   FiRepeat,
@@ -14,7 +15,8 @@ import {
   FiAlertTriangle,
   FiChevronDown,
   FiMove,
-  FiCheck
+  FiCheck,
+  FiX
 } from 'react-icons/fi'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
@@ -55,6 +57,11 @@ export default function DashboardPage() {
   const [dueRecurring, setDueRecurring] = useState<RecurringTransaction[]>([])
   const [allRecurring, setAllRecurring] = useState<RecurringTransaction[]>([])
   const [overview, setOverview] = useState<WorkspaceOverview[]>([])
+  const [uncreatedPockets, setUncreatedPockets] = useState<{ name: string; count: number }[]>([])
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
+  const [newAccountName, setNewAccountName] = useState('')
+  const [newAccountType, setNewAccountType] = useState<WorkspaceType>('other')
+  const [creatingAccount, setCreatingAccount] = useState(false)
   const [activeWsId, setActiveWsId] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -72,11 +79,17 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-    // Panel de espacios de trabajo
+    // Panel de espacios de trabajo y bolsillos no creados
     try {
-      setOverview(await LocalDB.getWorkspacesOverview())
+      const [ov, uncreated] = await Promise.all([
+        LocalDB.getWorkspacesOverview(),
+        LocalDB.getUncreatedPockets()
+      ])
+      setOverview(ov)
+      setUncreatedPockets(uncreated)
     } catch {
       setOverview([])
+      setUncreatedPockets([])
     }
     // Recurrentes (tabla opcional: no romper si aún no existe)
     try {
@@ -87,6 +100,24 @@ export default function DashboardPage() {
     } catch {
       setDueRecurring([])
       setAllRecurring([])
+    }
+  }
+
+  const handleCreateQuickAccount = async (name: string, type: WorkspaceType = 'other') => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setCreatingAccount(true)
+    try {
+      const created = await LocalDB.addWorkspace(trimmed, type)
+      toast.success(`Cuenta "${trimmed}" creada con éxito`)
+      setIsAddAccountOpen(false)
+      setNewAccountName('')
+      await loadDashboardData()
+      switchWorkspace(created.id)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al crear la cuenta')
+    } finally {
+      setCreatingAccount(false)
     }
   }
 
@@ -440,13 +471,51 @@ export default function DashboardPage() {
                 Mis Cuentas y Bolsillos (Espacios de Trabajo)
               </h3>
               <span className="text-[10px] bg-slate-950 border border-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
-                {overview.length} cuenta{overview.length > 1 ? 's' : ''} / bolsillo{overview.length > 1 ? 's' : ''}
+                {overview.length} cuenta{overview.length > 1 ? 's' : ''}
               </span>
             </div>
-            <FiChevronDown className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setIsAddAccountOpen(true); }}
+                className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-1 rounded transition-colors cursor-pointer shadow-xs"
+              >
+                <FiPlus className="w-3.5 h-3.5" /> Agregar Cuenta
+              </button>
+              <FiChevronDown className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" />
+            </div>
           </summary>
 
-          <div className="px-5 pb-5 pt-1">
+          <div className="px-5 pb-5 pt-1 space-y-3.5">
+            {/* Banner de Cuentas Detectadas en Movimientos no creadas como espacio */}
+            {uncreatedPockets.length > 0 && (
+              <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-md p-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      ✨ Cuentas detectadas en tus movimientos que puedes separar:
+                    </p>
+                    <p className="text-[10px] text-emerald-400/80 mt-0.5">
+                      Haz clic en cualquiera para crear su espacio independiente y vincular sus movimientos.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {uncreatedPockets.map((p) => (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => handleCreateQuickAccount(p.name)}
+                        className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <FiPlus className="w-3 h-3" /> {p.name} ({p.count})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cuadrícula de Cuentas / Bolsillos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {overview.map((w) => {
                 const meta = getWorkspaceAccountMeta(w.name, w.type)
@@ -509,6 +578,124 @@ export default function DashboardPage() {
             </div>
           </div>
         </details>
+      )}
+
+      {/* MODAL: AGREGAR NUEVA CUENTA / BOLSILLO */}
+      {isAddAccountOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative animate-fadeIn">
+            <button
+              onClick={() => { setIsAddAccountOpen(false); setNewAccountName(''); }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 cursor-pointer"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-md font-bold text-slate-100 mb-1">Agregar Cuenta o Bolsillo</h2>
+            <p className="text-xs text-slate-400 mb-4">
+              Crea un espacio independiente para tus cuentas bancarias, billeteras o efectivo.
+            </p>
+
+            {/* Accesos rápidos a cuentas populares */}
+            <div className="mb-4">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Sugerencias Populares (1 Clic)
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Bancolombia',
+                  'Nequi',
+                  'Efectivo',
+                  'Davivienda',
+                  'Daviplata',
+                  'Tarjeta de Crédito',
+                  'Cuenta de Ahorros',
+                  'Inversiones'
+                ].map((preset) => {
+                  const meta = getWorkspaceAccountMeta(preset)
+                  const PresetIcon = meta.Icon
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => handleCreateQuickAccount(preset)}
+                      className="text-xs font-semibold bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <PresetIcon className="w-3 h-3 text-emerald-400" />
+                      {preset}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleCreateQuickAccount(newAccountName, newAccountType)
+              }}
+              className="space-y-4 pt-2 border-t border-slate-800"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nombre Personalizado</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. BBVA, Nu, Billetera Personal, Alcancía..."
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Cuenta</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WS_TYPES.map((t) => {
+                    const selected = newAccountType === t.value
+                    const Icon = t.Icon
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setNewAccountType(t.value)}
+                        className={`flex items-start gap-2 p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                          selected
+                            ? 'border-emerald-500 bg-emerald-500/10'
+                            : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${selected ? 'text-emerald-400' : 'text-slate-400'}`} />
+                        <span className="min-w-0">
+                          <span className={`block text-xs font-bold ${selected ? 'text-emerald-400' : 'text-slate-200'}`}>{t.label}</span>
+                          <span className="block text-[10px] text-slate-500 leading-tight">{t.hint}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsAddAccountOpen(false); setNewAccountName(''); }}
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-400 rounded-md text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingAccount}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {creatingAccount ? 'Creando...' : 'Crear Cuenta'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* BANNER: recurrentes pendientes por confirmar */}

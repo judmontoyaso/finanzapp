@@ -294,8 +294,81 @@ export const LocalDB = {
     const activeWs = (data && data.length > 0) ? data[0] : { id: 'fallback-ws-id', name, user_id: user.id, type: wsType }
     await this.seedCategoriesFromTemplate(wsType, activeWs.id, user.id)
 
+    // Si existen transacciones asignadas a este bolsillo en otros espacios, migrarlas
+    try {
+      await this.migratePocketTransactionsToWorkspace(name, activeWs.id)
+    } catch {}
+
     this.dispatchEvent()
     return activeWs as Workspace
+  },
+
+  async getUncreatedPockets(): Promise<{ name: string; count: number }[]> {
+    try {
+      const wss = await this.getWorkspaces()
+      const wsNames = new Set(wss.map(w => w.name.trim().toLowerCase()))
+
+      const { data: allTxs } = await supabase
+        .from('transactions')
+        .select('details')
+        .limit(2000)
+
+      const pocketCounts = new Map<string, number>()
+
+      ;(allTxs || []).forEach(tx => {
+        if (Array.isArray(tx.details)) {
+          for (const item of tx.details) {
+            if (item?.description && item.description.startsWith('Bolsillo:')) {
+              const rawName = item.description.replace('Bolsillo:', '').trim()
+              if (rawName && !wsNames.has(rawName.toLowerCase()) && rawName !== 'Cuenta Principal') {
+                pocketCounts.set(rawName, (pocketCounts.get(rawName) || 0) + 1)
+              }
+            }
+          }
+        }
+      })
+
+      return Array.from(pocketCounts.entries()).map(([name, count]) => ({ name, count }))
+    } catch {
+      return []
+    }
+  },
+
+  async migratePocketTransactionsToWorkspace(pocketName: string, targetWorkspaceId: string): Promise<number> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 0
+
+    const { data: allTxs } = await supabase
+      .from('transactions')
+      .select('*')
+
+    if (!allTxs || allTxs.length === 0) return 0
+
+    let count = 0
+    const pLower = pocketName.trim().toLowerCase()
+
+    for (const tx of allTxs) {
+      if (tx.workspace_id === targetWorkspaceId) continue
+      if (Array.isArray(tx.details)) {
+        const hasPocket = tx.details.some(d =>
+          d?.description &&
+          d.description.startsWith('Bolsillo:') &&
+          d.description.replace('Bolsillo:', '').trim().toLowerCase() === pLower
+        )
+        if (hasPocket) {
+          await supabase
+            .from('transactions')
+            .update({ workspace_id: targetWorkspaceId })
+            .eq('id', tx.id)
+          count++
+        }
+      }
+    }
+
+    if (count > 0) {
+      this.dispatchEvent()
+    }
+    return count
   },
 
   // --- WORKSPACE MEMBERS (compartir por email) ---
