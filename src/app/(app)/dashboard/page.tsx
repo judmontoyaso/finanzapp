@@ -19,7 +19,8 @@ import {
   FiX,
   FiUsers,
   FiTrash2,
-  FiCopy
+  FiCopy,
+  FiEdit2
 } from 'react-icons/fi'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
@@ -70,6 +71,12 @@ export default function DashboardPage() {
   const [sharingMemberEmail, setSharingMemberEmail] = useState('')
   const [sharingMembersLoading, setSharingMembersLoading] = useState(false)
   const [sharingAdding, setSharingAdding] = useState(false)
+  const [editingWs, setEditingWs] = useState<WorkspaceOverview | null>(null)
+  const [editWsName, setEditWsName] = useState('')
+  const [editWsType, setEditWsType] = useState<WorkspaceType>('other')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingWs, setDeletingWs] = useState<WorkspaceOverview | null>(null)
+  const [deletingLoading, setDeletingLoading] = useState(false)
   const [activeWsId, setActiveWsId] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -185,6 +192,43 @@ export default function DashboardPage() {
     const url = `${window.location.origin}/login`
     navigator.clipboard.writeText(url)
     toast.success('Enlace de acceso copiado al portapapeles')
+  }
+
+  const openEditModal = (ws: WorkspaceOverview) => {
+    setEditingWs(ws)
+    setEditWsName(ws.name)
+    setEditWsType(ws.type || 'other')
+  }
+
+  const handleSaveEditWs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingWs || !editWsName.trim()) return
+    setSavingEdit(true)
+    try {
+      await LocalDB.updateWorkspace(editingWs.id, editWsName.trim(), editWsType)
+      toast.success('Espacio actualizado con éxito')
+      setEditingWs(null)
+      await loadDashboardData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar el espacio')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const handleConfirmDeleteWs = async () => {
+    if (!deletingWs) return
+    setDeletingLoading(true)
+    try {
+      await LocalDB.deleteWorkspace(deletingWs.id)
+      toast.success(`Espacio "${deletingWs.name}" eliminado`)
+      setDeletingWs(null)
+      await loadDashboardData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar el espacio')
+    } finally {
+      setDeletingLoading(false)
+    }
   }
 
   const switchWorkspace = (id: string) => {
@@ -527,14 +571,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* MIS CUENTAS Y BOLSILLOS (ESPACIOS DE TRABAJO) */}
+      {/* MIS CUENTAS Y BOLSILLOS (ESPACIOS) */}
       {overview.length > 0 && (
         <details open className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
           <summary className="list-none cursor-pointer px-5 py-4 flex items-center justify-between hover:bg-slate-850/40 transition-colors">
             <div className="flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                Mis Cuentas y Bolsillos (Espacios de Trabajo)
+                Mis Cuentas y Bolsillos (Espacios)
               </h3>
               <span className="text-[10px] bg-slate-950 border border-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
                 {overview.length} cuenta{overview.length > 1 ? 's' : ''}
@@ -614,27 +658,49 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {w.isOwner ? (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); openShareModalForWs(w); }}
-                              className="text-[10px] font-semibold text-slate-400 hover:text-emerald-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer"
-                              title="Compartir esta cuenta con otro usuario"
-                            >
-                              <FiUsers className="w-3 h-3 text-emerald-500" /> Compartir
-                            </button>
-                          ) : (
+                          {w.isOwner && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); openEditModal(w); }}
+                                className="text-[10px] font-semibold text-slate-400 hover:text-amber-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 p-1.5 rounded transition-all flex items-center gap-1 cursor-pointer"
+                                title="Editar nombre y tipo de espacio"
+                              >
+                                <FiEdit2 className="w-3 h-3" />
+                              </button>
+                              {overview.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setDeletingWs(w); }}
+                                  className="text-[10px] font-semibold text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/40 p-1.5 rounded transition-all flex items-center gap-1 cursor-pointer"
+                                  title="Eliminar este espacio"
+                                >
+                                  <FiTrash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); openShareModalForWs(w); }}
+                                className="text-[10px] font-semibold text-slate-400 hover:text-emerald-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 px-2 py-1 rounded transition-all flex items-center gap-1 cursor-pointer"
+                                title="Compartir este espacio"
+                              >
+                                <FiUsers className="w-3 h-3 text-emerald-500" />
+                                <span className="hidden xl:inline">Compartir</span>
+                              </button>
+                            </>
+                          )}
+                          {!w.isOwner && (
                             <span className="text-[9px] font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded flex items-center gap-1">
                               <FiUsers className="w-2.5 h-2.5" /> Compartida
                             </span>
                           )}
 
                           {isActive ? (
-                            <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase shrink-0">
+                            <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full uppercase shrink-0">
                               Activo
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2 py-0.5 rounded transition-colors shrink-0">
+                            <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2 py-1 rounded transition-colors shrink-0">
                               Abrir
                             </span>
                           )}
@@ -875,6 +941,141 @@ export default function DashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDITAR ESPACIO */}
+      {editingWs && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative animate-fadeIn">
+            <button
+              onClick={() => setEditingWs(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 cursor-pointer"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-md font-bold text-slate-100 mb-1 flex items-center gap-2">
+              <FiEdit2 className="w-4 h-4 text-amber-400" />
+              Editar Espacio
+            </h2>
+            <p className="text-xs text-slate-400 mb-4">
+              Modifica el nombre y el tipo de este espacio para mantener tus finanzas organizadas.
+            </p>
+
+            <form onSubmit={handleSaveEditWs} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nombre del Espacio</label>
+                <input
+                  type="text"
+                  required
+                  value={editWsName}
+                  onChange={(e) => setEditWsName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Cuenta / Espacio</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WS_TYPES.map((t) => {
+                    const selected = editWsType === t.value
+                    const Icon = t.Icon
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setEditWsType(t.value)}
+                        className={`flex items-start gap-2 p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                          selected
+                            ? 'border-emerald-500 bg-emerald-500/10'
+                            : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${selected ? 'text-emerald-400' : 'text-slate-400'}`} />
+                        <span className="min-w-0">
+                          <span className={`block text-xs font-bold ${selected ? 'text-emerald-400' : 'text-slate-200'}`}>{t.label}</span>
+                          <span className="block text-[10px] text-slate-500 leading-tight">{t.hint}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingWs(null)}
+                  className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-400 rounded-md text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit || !editWsName.trim()}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ELIMINAR ESPACIO */}
+      {deletingWs && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-500/30 w-full max-w-md rounded-md p-6 shadow-md relative animate-fadeIn">
+            <button
+              onClick={() => setDeletingWs(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 cursor-pointer"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="w-9 h-9 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center flex-shrink-0">
+                <FiTrash2 className="w-5 h-5" />
+              </span>
+              <div>
+                <h2 className="text-md font-bold text-slate-100 leading-tight">
+                  Eliminar Espacio
+                </h2>
+                <p className="text-xs text-rose-400 font-semibold">{deletingWs.name}</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded p-3 my-4">
+              <p className="text-xs text-slate-200 leading-relaxed">
+                ¿Estás seguro de que deseas eliminar permanentemente el espacio <strong className="text-white font-bold">{deletingWs.name}</strong>?
+              </p>
+              <p className="text-[11px] text-rose-300/90 mt-1.5 leading-normal">
+                ⚠️ Se eliminarán todas las transacciones, categorías, presupuestos y miembros asociados a este espacio. Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingWs(null)}
+                className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 rounded-md text-xs font-semibold transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteWs}
+                disabled={deletingLoading}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-bold transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+                {deletingLoading ? 'Eliminando...' : 'Sí, Eliminar Espacio'}
+              </button>
+            </div>
           </div>
         </div>
       )}

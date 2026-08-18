@@ -609,7 +609,7 @@ export default function ImportPage() {
             </h3>
             <p className="text-[10px] text-slate-400 leading-relaxed">
               El importador reconoce de forma automática los <strong>Bolsillos/Cuentas</strong> (ej. <em>Cash, Ahorro, Apto, Inversión Virtual, Fiducia, Cuenta Deuda Casa</em>) 
-              a partir de la columna <strong>Account (Cuenta)</strong> del CSV y te permite asignarlos a tus <strong>Espacios de Trabajo</strong>. Las <strong>Categorías</strong> se asocian 
+              a partir de la columna <strong>Account (Cuenta)</strong> del CSV y te permite asignarlos a tus <strong>Espacios</strong>. Las <strong>Categorías</strong> se asocian 
               a las categorías de ArcaFinanzas.
             </p>
           </div>
@@ -701,11 +701,11 @@ export default function ImportPage() {
           <div>
             <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Mapeo de Bolsillos y Categorías</h2>
             <p className="text-slate-400 text-xs leading-relaxed mt-0.5">
-              Configura a qué Espacio de Trabajo se enviarán los bolsillos encontrados en la columna Cuenta del CSV y mapea las categorías.
+              Configura a qué Espacio se enviarán los bolsillos encontrados en la columna Cuenta del CSV y mapea las categorías.
             </p>
           </div>
 
-          {/* SECCIÓN 1: MAPEO DE BOLSILLOS / CUENTAS A ESPACIOS DE TRABAJO */}
+          {/* SECCIÓN 1: MAPEO DE BOLSILLOS / CUENTAS A ESPACIOS */}
           {moneyAccounts.length > 0 && (
             <div className="space-y-3 bg-slate-950/60 border border-slate-850 rounded-lg p-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
@@ -715,7 +715,7 @@ export default function ImportPage() {
                     Bolsillos / Cuentas encontrados en el CSV ({moneyAccounts.length})
                   </h3>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    Cuentas extraídas de la columna <strong>Account (Cuenta)</strong> del archivo. Asigna cada una a un <strong>Espacio de Trabajo</strong> de Arca.
+                    Cuentas extraídas de la columna <strong>Account (Cuenta)</strong> del archivo. Asigna cada una a un <strong>Espacio</strong> de Arca.
                   </p>
                 </div>
               </div>
@@ -991,7 +991,7 @@ export default function ImportPage() {
           {moneyAccounts.length > 0 && (
             <div className="bg-slate-950 border border-slate-850 rounded-md p-4 space-y-2">
               <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">
-                Distribución por Espacio de Trabajo:
+                Distribución por Espacio:
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {moneyAccounts.map(acc => {
@@ -1028,7 +1028,7 @@ export default function ImportPage() {
                 <div>
                   <span className="text-xs font-bold text-slate-200 block">Iniciar desde cero en los espacios seleccionados</span>
                   <span className="text-[10px] text-slate-500 block mt-0.5">
-                    Elimina los movimientos previos en los espacios de trabajo destino antes de importar el CSV.
+                    Elimina los movimientos previos en los espacios destino antes de importar el CSV.
                   </span>
                 </div>
                 <input
@@ -1045,7 +1045,7 @@ export default function ImportPage() {
                 </h3>
                 <p className="text-[10px] text-slate-500 leading-relaxed">
                   {clearExisting ? (
-                    <strong className="text-rose-400">Atención: Se eliminarán de forma permanente todas las transacciones de los espacios de trabajo destino antes de importar las del CSV.</strong>
+                    <strong className="text-rose-400">Atención: Se eliminarán de forma permanente todas las transacciones de los espacios destino antes de importar las del CSV.</strong>
                   ) : (
                     <span>Este proceso agregará las transacciones del CSV a tus espacios sin borrar los datos existentes.</span>
                   )}

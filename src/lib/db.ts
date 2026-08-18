@@ -303,6 +303,71 @@ export const LocalDB = {
     return activeWs as Workspace
   },
 
+  async updateWorkspace(id: string, name: string, wsType?: WorkspaceType): Promise<Workspace> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const updatePayload: { name: string; type?: WorkspaceType } = { name: name.trim() }
+    if (wsType) updatePayload.type = wsType
+
+    const { data, error } = await supabase
+      .from('workspaces')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    this.dispatchEvent()
+    return data as Workspace
+  },
+
+  async deleteWorkspace(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { data: ws, error: wsError } = await supabase
+      .from('workspaces')
+      .select('id, user_id')
+      .eq('id', id)
+      .single()
+
+    if (wsError || !ws) throw new Error('Espacio no encontrado')
+    if (ws.user_id !== user.id) throw new Error('No tienes permiso para eliminar este espacio')
+
+    // Eliminar datos dependientes de este espacio
+    try {
+      await supabase.from('transactions').delete().eq('workspace_id', id)
+      await supabase.from('budgets').delete().eq('workspace_id', id)
+      await supabase.from('categories').delete().eq('workspace_id', id)
+      await supabase.from('savings_goals').delete().eq('workspace_id', id)
+      await supabase.from('recurring_transactions').delete().eq('workspace_id', id)
+      await supabase.from('workspace_members').delete().eq('workspace_id', id)
+      await supabase.from('report_settings').delete().eq('workspace_id', id)
+    } catch {}
+
+    const { error } = await supabase
+      .from('workspaces')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+
+    // Si el espacio eliminado era el activo, cambiar al primer espacio restante
+    const activeWsId = this.getActiveWorkspaceId()
+    if (activeWsId === id) {
+      const remaining = await this.getWorkspaces()
+      const nextWs = remaining.find(w => w.id !== id)
+      if (nextWs) {
+        this.setActiveWorkspaceId(nextWs.id)
+      } else {
+        localStorage.removeItem('finanzas_active_workspace')
+      }
+    }
+
+    this.dispatchEvent()
+  },
+
   async getUncreatedPockets(): Promise<{ name: string; count: number }[]> {
     try {
       const wss = await this.getWorkspaces()
