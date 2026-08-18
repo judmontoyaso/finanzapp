@@ -37,8 +37,8 @@ export async function POST(request: Request) {
   if (wsError || !ws) {
     return NextResponse.json({ error: 'Espacio no encontrado' }, { status: 404 })
   }
-  if (ws.user_id !== user.id || ws.type === 'personal') {
-    return NextResponse.json({ error: 'No autorizado para invitar aquí' }, { status: 403 })
+  if (ws.user_id !== user.id) {
+    return NextResponse.json({ error: 'No autorizado para invitar a esta cuenta' }, { status: 403 })
   }
 
   // Insertar miembro (RLS vuelve a validar en el servidor)

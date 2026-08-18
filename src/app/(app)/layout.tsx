@@ -64,7 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId)
   const isOwner = !!user && !!activeWorkspace && activeWorkspace.user_id === user.id
-  const canShare = isOwner && activeWorkspace?.type !== 'personal'
+  const canShare = isOwner
 
   const loadData = useCallback(async () => {
     try {
@@ -651,12 +651,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
 
             <h2 className="text-md font-bold text-slate-100 mb-1 flex items-center gap-2">
-              <FiUsers className="w-4 h-4 text-emerald-500" /> Compartir Espacio
+              <FiUsers className="w-4 h-4 text-emerald-500" /> Compartir Cuenta / Espacio
             </h2>
             <p className="text-xs text-slate-400 mb-5">
-              Vincula personas por su email. Podrán ver y editar todo en
-              <span className="text-slate-300 font-semibold"> {activeWorkspace?.name}</span>.
-              Deben iniciar sesión con ese mismo email.
+              Vincula a otra persona por su email (pareja, socio o familiar). Ambos usuarios podrán ver el balance, consultar movimientos y registrar nuevos ingresos y gastos en tiempo real en
+              <span className="text-slate-200 font-bold"> {activeWorkspace?.name}</span>.
             </p>
 
             <form onSubmit={handleAddMember} className="flex gap-2 mb-5">

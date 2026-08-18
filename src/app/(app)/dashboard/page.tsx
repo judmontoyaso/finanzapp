@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { LocalDB, WorkspaceType } from '@/lib/db'
-import { Transaction, Category, Budget, RecurringTransaction, WorkspaceOverview } from '@/types'
+import { Transaction, Category, Budget, RecurringTransaction, WorkspaceOverview, WorkspaceMember } from '@/types'
 import DashboardCharts from '@/components/DashboardCharts'
 import { getWorkspaceAccountMeta, WS_TYPES } from '@/lib/workspaceMeta'
 import {
@@ -16,7 +16,10 @@ import {
   FiChevronDown,
   FiMove,
   FiCheck,
-  FiX
+  FiX,
+  FiUsers,
+  FiTrash2,
+  FiCopy
 } from 'react-icons/fi'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
@@ -62,6 +65,11 @@ export default function DashboardPage() {
   const [newAccountName, setNewAccountName] = useState('')
   const [newAccountType, setNewAccountType] = useState<WorkspaceType>('other')
   const [creatingAccount, setCreatingAccount] = useState(false)
+  const [sharingWs, setSharingWs] = useState<WorkspaceOverview | null>(null)
+  const [sharingMembers, setSharingMembers] = useState<WorkspaceMember[]>([])
+  const [sharingMemberEmail, setSharingMemberEmail] = useState('')
+  const [sharingMembersLoading, setSharingMembersLoading] = useState(false)
+  const [sharingAdding, setSharingAdding] = useState(false)
   const [activeWsId, setActiveWsId] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -119,6 +127,64 @@ export default function DashboardPage() {
     } finally {
       setCreatingAccount(false)
     }
+  }
+
+  const openShareModalForWs = async (ws: WorkspaceOverview) => {
+    setSharingWs(ws)
+    setSharingMemberEmail('')
+    setSharingMembersLoading(true)
+    try {
+      const mems = await LocalDB.getWorkspaceMembers(ws.id)
+      setSharingMembers(mems)
+    } catch {
+      toast.error('No se pudieron cargar los miembros')
+    } finally {
+      setSharingMembersLoading(false)
+    }
+  }
+
+  const handleAddMemberToWs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!sharingWs) return
+    const email = sharingMemberEmail.trim().toLowerCase()
+    if (!email) return
+    setSharingAdding(true)
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: sharingWs.id, email }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'No se pudo vincular')
+        return
+      }
+      if (data.member) setSharingMembers((prev) => [...prev, data.member])
+      setSharingMemberEmail('')
+      toast.success(data.emailed ? 'Invitación enviada por correo' : 'Usuario vinculado a la cuenta')
+    } catch {
+      toast.error('Error al vincular el usuario')
+    } finally {
+      setSharingAdding(false)
+    }
+  }
+
+  const handleRemoveMemberFromWs = async (memberId: string) => {
+    try {
+      await LocalDB.removeWorkspaceMember(memberId)
+      setSharingMembers((prev) => prev.filter((m) => m.id !== memberId))
+      toast.success('Acceso revocado')
+    } catch {
+      toast.error('Error al revocar acceso')
+    }
+  }
+
+  const handleCopyInviteLink = () => {
+    if (typeof window === 'undefined') return
+    const url = `${window.location.origin}/login`
+    navigator.clipboard.writeText(url)
+    toast.success('Enlace de acceso copiado al portapapeles')
   }
 
   const switchWorkspace = (id: string) => {
@@ -547,15 +613,32 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {isActive ? (
-                          <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase shrink-0">
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2 py-0.5 rounded transition-colors shrink-0">
-                            Seleccionar
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {w.isOwner ? (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); openShareModalForWs(w); }}
+                              className="text-[10px] font-semibold text-slate-400 hover:text-emerald-400 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer"
+                              title="Compartir esta cuenta con otro usuario"
+                            >
+                              <FiUsers className="w-3 h-3 text-emerald-500" /> Compartir
+                            </button>
+                          ) : (
+                            <span className="text-[9px] font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                              <FiUsers className="w-2.5 h-2.5" /> Compartida
+                            </span>
+                          )}
+
+                          {isActive ? (
+                            <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase shrink-0">
+                              Activo
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-slate-200 px-2 py-0.5 rounded transition-colors shrink-0">
+                              Abrir
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Balance mensual de esta cuenta / bolsillo */}
@@ -578,6 +661,104 @@ export default function DashboardPage() {
             </div>
           </div>
         </details>
+      )}
+
+      {/* MODAL: COMPARTIR CUENTA / ESPACIO */}
+      {sharingWs && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-md p-6 shadow-md relative animate-fadeIn">
+            <button
+              onClick={() => { setSharingWs(null); setSharingMembers([]); }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 cursor-pointer"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="w-8 h-8 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                <FiUsers className="w-4 h-4" />
+              </span>
+              <div>
+                <h2 className="text-md font-bold text-slate-100 leading-tight">
+                  Compartir cuenta: <span className="text-emerald-400">{sharingWs.name}</span>
+                </h2>
+                <p className="text-[10px] text-slate-400">Acceso compartido en tiempo real</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Vincula a otra persona por su correo (ej. pareja, socio o familiar). Ambos usuarios podrán ver el balance, consultar movimientos y registrar nuevos ingresos y gastos en tiempo real.
+            </p>
+
+            <form onSubmit={handleAddMemberToWs} className="flex gap-2 mb-4">
+              <input
+                type="email"
+                required
+                placeholder="correo@ejemplo.com"
+                value={sharingMemberEmail}
+                onChange={(e) => setSharingMemberEmail(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={sharingAdding}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <FiPlus className="w-3.5 h-3.5" /> {sharingAdding ? 'Vinculando...' : 'Invitar'}
+              </button>
+            </form>
+
+            <div className="space-y-2 mb-4">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Personas con acceso ({sharingMembers.length})
+              </label>
+
+              {sharingMembersLoading ? (
+                <p className="text-xs text-slate-500 text-center py-3 bg-slate-950 rounded border border-slate-850">Cargando miembros...</p>
+              ) : sharingMembers.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-3 bg-slate-950 rounded border border-slate-850">
+                  Esta cuenta aún es privada (solo tú tienes acceso).
+                </p>
+              ) : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
+                  {sharingMembers.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span className="text-xs text-slate-200 truncate">{m.invited_email}</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveMemberFromWs(m.id)}
+                        title="Revocar acceso"
+                        className="p-1 text-slate-500 hover:text-rose-400 transition-all cursor-pointer flex-shrink-0"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={handleCopyInviteLink}
+                className="text-[11px] font-semibold text-slate-400 hover:text-emerald-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <FiCopy className="w-3.5 h-3.5" /> Copiar enlace de inicio de sesión
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSharingWs(null); setSharingMembers([]); }}
+                className="px-3.5 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded text-xs font-semibold transition-all cursor-pointer"
+              >
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL: AGREGAR NUEVA CUENTA / BOLSILLO */}
