@@ -6,7 +6,6 @@ import { Transaction, Category, TransactionItem } from '@/types'
 import { toast } from 'react-hot-toast'
 import {
   FiPlus,
-  FiDownload,
   FiEdit,
   FiTrash2,
   FiSearch,
@@ -737,31 +736,6 @@ export default function TransactionsPage() {
     }
   }
 
-  const handleExportCSV = () => {
-    if (filteredTransactions.length === 0) {
-      toast.error('No hay transacciones para exportar')
-      return
-    }
-    const headers = ['Fecha', 'Descripción', 'Categoría', 'Tipo', 'Monto', 'Detalles']
-    const rows = filteredTransactions.map((tx) => [
-      tx.date,
-      `"${tx.description.replace(/"/g, '""')}"`,
-      `"${getCategoryDisplayName(tx.category_id).replace(/"/g, '""')}"`,
-      tx.type === 'income' ? 'Ingreso' : 'Gasto',
-      tx.amount,
-      `"${(tx.details || []).map((i) => `${i.description}: ${i.amount}`).join('; ').replace(/"/g, '""')}"`,
-    ])
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `transacciones_${selectedMonth || 'todas'}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('CSV exportado con éxito')
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -817,35 +791,14 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6 animate-fadeIn pb-8 max-w-6xl mx-auto">
       {/* CABECERA PRINCIPAL */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
-            <img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" />
-            Movimientos y Transacciones
-          </h1>
-          <p className="text-slate-400 text-xs mt-1">
-            Visualiza tus finanzas organizadas por meses y categorías jerárquicas.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleExportCSV}
-            disabled={filteredTransactions.length === 0}
-            className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 px-3.5 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-          >
-            <FiDownload className="w-4 h-4" />
-            Exportar CSV
-          </button>
-
-          <button
-            onClick={openAddModal}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-bold text-xs shadow-sm active:scale-[0.99] cursor-pointer"
-          >
-            <FiPlus className="w-4 h-4" />
-            Nuevo Movimiento
-          </button>
-        </div>
+      <div>
+        <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2.5">
+          <img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" />
+          Movimientos y Transacciones
+        </h1>
+        <p className="text-slate-400 text-xs mt-1">
+          Visualiza tus finanzas organizadas por meses y categorías jerárquicas.
+        </p>
       </div>
 
       {/* NAVEGADOR DE MESES Y RESUMEN FINANCIERO */}
