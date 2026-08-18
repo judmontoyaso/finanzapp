@@ -20,7 +20,8 @@ import {
   FiUsers,
   FiTrash2,
   FiCopy,
-  FiEdit2
+  FiEdit2,
+  FiRefreshCw
 } from 'react-icons/fi'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
@@ -61,7 +62,6 @@ export default function DashboardPage() {
   const [dueRecurring, setDueRecurring] = useState<RecurringTransaction[]>([])
   const [allRecurring, setAllRecurring] = useState<RecurringTransaction[]>([])
   const [overview, setOverview] = useState<WorkspaceOverview[]>([])
-  const [uncreatedPockets, setUncreatedPockets] = useState<{ name: string; count: number }[]>([])
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [newAccountName, setNewAccountName] = useState('')
   const [newAccountType, setNewAccountType] = useState<WorkspaceType>('other')
@@ -94,17 +94,12 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-    // Panel de espacios de trabajo y bolsillos no creados
+    // Panel de espacios y bolsillos
     try {
-      const [ov, uncreated] = await Promise.all([
-        LocalDB.getWorkspacesOverview(),
-        LocalDB.getUncreatedPockets()
-      ])
+      const ov = await LocalDB.getWorkspacesOverview()
       setOverview(ov)
-      setUncreatedPockets(uncreated)
     } catch {
       setOverview([])
-      setUncreatedPockets([])
     }
     // Recurrentes (tabla opcional: no romper si aún no existe)
     try {
@@ -228,6 +223,20 @@ export default function DashboardPage() {
       toast.error(err instanceof Error ? err.message : 'Error al eliminar el espacio')
     } finally {
       setDeletingLoading(false)
+    }
+  }
+
+  const [mergingWs, setMergingWs] = useState(false)
+  const handleMergeAccidentalWorkspace = async (sourceWsId: string) => {
+    setMergingWs(true)
+    try {
+      const count = await LocalDB.mergeWorkspaceInto(sourceWsId, activeWsId)
+      toast.success(`Se unificaron ${count} movimientos en este espacio y se limpió el espacio duplicado.`)
+      await loadDashboardData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al unificar espacio')
+    } finally {
+      setMergingWs(false)
     }
   }
 
@@ -571,61 +580,174 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* MIS CUENTAS Y BOLSILLOS (ESPACIOS) */}
+      {/* BANNER: ESPACIOS ACCIDENTALES QUE PUEDEN UNIFICARSE (EJ. Cash) */}
+      {(() => {
+        const activeWs = overview.find((w) => w.id === activeWsId) || overview[0]
+        const accidentalWs = overview.filter(
+          (w) => w.id !== activeWs?.id && ['cash', 'efectivo'].includes(w.name.trim().toLowerCase())
+        )
+        if (!accidentalWs.length) return null
+
+        return (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="w-8 h-8 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <FiRefreshCw className="w-4 h-4" />
+              </span>
+              <div>
+                <p className="text-xs font-bold text-amber-300">
+                  {`Unificar espacio "${accidentalWs[0].name}" en ${activeWs?.name || 'tu espacio principal'}`}
+                </p>
+                <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                  Detectamos el espacio <strong>{accidentalWs[0].name}</strong> creado por separado. Puedes mover todos sus movimientos a <strong>{activeWs?.name}</strong> con el bolsillo <em>&ldquo;{accidentalWs[0].name}&rdquo;</em> y eliminar el espacio duplicado.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={mergingWs}
+              onClick={() => handleMergeAccidentalWorkspace(accidentalWs[0].id)}
+              className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-md text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <FiCheck className="w-3.5 h-3.5" />
+              {mergingWs ? 'Unificando...' : `Unificar a ${activeWs?.name || 'este espacio'}`}
+            </button>
+          </div>
+        )
+      })()}
+
+      {/* SECCIÓN 1: CUENTAS Y BOLSILLOS (DEL ESPACIO ACTIVO) */}
+      {(() => {
+        const activeWs = overview.find((w) => w.id === activeWsId) || overview[0]
+        const currentPockets = activeWs?.pockets || []
+
+        return (
+          <div className="bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
+                    Cuentas y Bolsillos · {activeWs?.name || 'Espacio Activo'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Desglose de saldos y movimientos por cuenta de origen (Efectivo, Bancolombia, Nequi, etc.) dentro de este espacio.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/transactions"
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-md transition-colors shrink-0"
+              >
+                <FiPlus className="w-3.5 h-3.5" /> Nuevo Movimiento
+              </Link>
+            </div>
+
+            {currentPockets.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {currentPockets.map((p) => {
+                  const meta = getWorkspaceAccountMeta(p.name)
+                  const Icon = meta.Icon
+
+                  return (
+                    <div
+                      key={p.name}
+                      className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md p-4 flex flex-col justify-between transition-all group"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2.5 mb-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border ${meta.colorClass}`}>
+                              <Icon className="w-4.5 h-4.5" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-100 truncate leading-tight group-hover:text-white">
+                                {p.name}
+                              </p>
+                              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mt-0.5">
+                                {meta.label} · {p.count} movimiento{p.count === 1 ? '' : 's'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Link
+                            href={`/transactions?pocket=${encodeURIComponent(p.name)}`}
+                            className="text-[10px] font-bold bg-slate-900 group-hover:bg-slate-850 border border-slate-800 text-slate-400 group-hover:text-emerald-400 px-2 py-1 rounded transition-colors shrink-0"
+                          >
+                            Ver Movs →
+                          </Link>
+                        </div>
+
+                        {/* Balance mensual de esta cuenta / bolsillo */}
+                        <div className="bg-slate-900/80 border border-slate-850 rounded p-3">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance del Mes</span>
+                            <span className={`text-base font-extrabold ${p.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              ${p.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-800/60">
+                            <span>Ingresos: <strong className="text-slate-300">+${p.income.toLocaleString('es-ES')}</strong></span>
+                            <span>Gastos: <strong className="text-slate-300">-${p.expense.toLocaleString('es-ES')}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="bg-slate-950/60 border border-slate-850 rounded-md p-6 text-center space-y-3">
+                <p className="text-xs text-slate-300 font-semibold">
+                  Aún no has registrado movimientos con cuentas o bolsillos específicos en este espacio.
+                </p>
+                <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                  Al agregar o editar un movimiento, selecciona en qué cuenta (Efectivo, Bancolombia, Nequi, Tarjeta...) se realizó para ver su balance aquí.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 pt-2">
+                  {['Efectivo', 'Bancolombia', 'Nequi', 'Tarjeta de Crédito'].map((preset) => (
+                    <Link
+                      key={preset}
+                      href={`/transactions?pocket=${encodeURIComponent(preset)}`}
+                      className="text-xs font-semibold bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-md transition-colors"
+                    >
+                      {preset}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* SECCIÓN 2: MIS ESPACIOS (ADMINISTRADOR DE ESPACIOS) */}
       {overview.length > 0 && (
-        <details open className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
+        <details className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
           <summary className="list-none cursor-pointer px-5 py-4 flex items-center justify-between hover:bg-slate-850/40 transition-colors">
             <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="w-2 h-2 rounded-full bg-slate-500"></span>
               <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                Mis Cuentas y Bolsillos (Espacios)
+                Mis Espacios ({overview.length})
               </h3>
-              <span className="text-[10px] bg-slate-950 border border-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
-                {overview.length} cuenta{overview.length > 1 ? 's' : ''}
+              <span className="text-[10px] text-slate-400">
+                (Cambiar, editar o crear espacios independientes)
               </span>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); setIsAddAccountOpen(true); }}
-                className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-1 rounded transition-colors cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold px-2.5 py-1 rounded transition-colors cursor-pointer"
               >
-                <FiPlus className="w-3.5 h-3.5" /> Agregar Cuenta
+                <FiPlus className="w-3.5 h-3.5" /> Nuevo Espacio
               </button>
               <FiChevronDown className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" />
             </div>
           </summary>
 
           <div className="px-5 pb-5 pt-1 space-y-3.5">
-            {/* Banner de Cuentas Detectadas en Movimientos no creadas como espacio */}
-            {uncreatedPockets.length > 0 && (
-              <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-md p-3">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                      ✨ Cuentas detectadas en tus movimientos que puedes separar:
-                    </p>
-                    <p className="text-[10px] text-emerald-400/80 mt-0.5">
-                      Haz clic en cualquiera para crear su espacio independiente y vincular sus movimientos.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {uncreatedPockets.map((p) => (
-                      <button
-                        key={p.name}
-                        type="button"
-                        onClick={() => handleCreateQuickAccount(p.name)}
-                        className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer"
-                      >
-                        <FiPlus className="w-3 h-3" /> {p.name} ({p.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Cuadrícula de Cuentas / Bolsillos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {overview.map((w) => {
                 const meta = getWorkspaceAccountMeta(w.name, w.type)
@@ -641,7 +763,6 @@ export default function DashboardPage() {
                     }`}
                   >
                     <div>
-                      {/* Cabecera de la cuenta / bolsillo */}
                       <div className="flex items-start justify-between gap-2.5 mb-3">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border ${meta.colorClass}`}>
@@ -707,10 +828,9 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      {/* Balance mensual de esta cuenta / bolsillo */}
                       <div className="bg-slate-900/80 border border-slate-850 rounded p-3">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance del Mes</span>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance Global del Mes</span>
                           <span className={`text-base font-extrabold ${w.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             ${w.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                           </span>
@@ -838,26 +958,23 @@ export default function DashboardPage() {
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-md font-bold text-slate-100 mb-1">Agregar Cuenta o Bolsillo</h2>
+            <h2 className="text-md font-bold text-slate-100 mb-1">Crear Nuevo Espacio</h2>
             <p className="text-xs text-slate-400 mb-4">
-              Crea un espacio independiente para tus cuentas bancarias, billeteras o efectivo.
+              Crea un espacio independiente para organizar tus ingresos, gastos y presupuestos de forma separada (ej. Finanzas Personales, Negocio, Hogar).
             </p>
 
-            {/* Accesos rápidos a cuentas populares */}
+            {/* Accesos rápidos a espacios sugeridos */}
             <div className="mb-4">
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                 Sugerencias Populares (1 Clic)
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  'Bancolombia',
-                  'Nequi',
-                  'Efectivo',
-                  'Davivienda',
-                  'Daviplata',
-                  'Tarjeta de Crédito',
-                  'Cuenta de Ahorros',
-                  'Inversiones'
+                  'Finanzas Personales',
+                  'Negocio / Empresa',
+                  'Hogar y Familia',
+                  'Inversiones',
+                  'Viajes / Proyectos'
                 ].map((preset) => {
                   const meta = getWorkspaceAccountMeta(preset)
                   const PresetIcon = meta.Icon
@@ -884,11 +1001,11 @@ export default function DashboardPage() {
               className="space-y-4 pt-2 border-t border-slate-800"
             >
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nombre Personalizado</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nombre del Espacio</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. BBVA, Nu, Billetera Personal, Alcancía..."
+                  placeholder="Ej. Finanzas Personales, Mi Negocio, Pareja..."
                   value={newAccountName}
                   onChange={(e) => setNewAccountName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
@@ -897,7 +1014,7 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Cuenta</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo de Espacio</label>
                 <div className="grid grid-cols-2 gap-2">
                   {WS_TYPES.map((t) => {
                     const selected = newAccountType === t.value
@@ -924,7 +1041,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => { setIsAddAccountOpen(false); setNewAccountName(''); }}
@@ -937,7 +1054,7 @@ export default function DashboardPage() {
                   disabled={creatingAccount}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  {creatingAccount ? 'Creando...' : 'Crear Cuenta'}
+                  {creatingAccount ? 'Creando...' : 'Crear Espacio'}
                 </button>
               </div>
             </form>

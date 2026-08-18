@@ -368,6 +368,54 @@ export const LocalDB = {
     this.dispatchEvent()
   },
 
+  async mergeWorkspaceInto(sourceWsId: string, targetWsId: string): Promise<number> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
+    const { data: sourceWs } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('id', sourceWsId)
+      .single()
+
+    if (!sourceWs) throw new Error('Espacio origen no encontrado')
+
+    const pocketName = sourceWs.name.trim()
+
+    const { data: txs } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('workspace_id', sourceWsId)
+
+    let count = 0
+    if (txs && txs.length > 0) {
+      for (const tx of txs) {
+        const rawDetails = tx.details as TransactionItem[] | undefined
+        const items: TransactionItem[] = Array.isArray(rawDetails) ? [...rawDetails] : []
+        const hasPocket = items.some(it => it?.description?.startsWith('Bolsillo:'))
+        if (!hasPocket) {
+          items.unshift({
+            description: `Bolsillo: ${pocketName}`,
+            amount: Math.abs(Number(tx.amount) || 0)
+          })
+        }
+
+        await supabase
+          .from('transactions')
+          .update({
+            workspace_id: targetWsId,
+            details: items
+          })
+          .eq('id', tx.id)
+        count++
+      }
+    }
+
+    await this.deleteWorkspace(sourceWsId)
+    this.dispatchEvent()
+    return count
+  },
+
   async getUncreatedPockets(): Promise<{ name: string; count: number }[]> {
     try {
       const wss = await this.getWorkspaces()

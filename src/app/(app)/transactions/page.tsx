@@ -230,6 +230,11 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     loadData()
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const p = params.get('pocket')
+      if (p) setPocketFilter(p)
+    }
     window.addEventListener('finanzas_data_changed', loadData)
     return () => window.removeEventListener('finanzas_data_changed', loadData)
   }, [])
@@ -1629,11 +1634,30 @@ export default function TransactionsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cuenta / Bolsillo (Opcional)</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cuenta / Bolsillo de Pago u Origen</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['Efectivo', 'Bancolombia', 'Nequi', 'Tarjeta de Crédito', 'Daviplata', 'Ahorros'].map((preset) => {
+                    const isSelected = formPocket.trim().toLowerCase() === preset.toLowerCase()
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setFormPocket(isSelected ? '' : preset)}
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                            : 'bg-slate-950 hover:bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    )
+                  })}
+                </div>
                 <input
                   type="text"
                   list="pockets-add-datalist"
-                  placeholder="Ej. Bancolombia, Nequi, Efectivo, Tarjeta..."
+                  placeholder="O escribe otra cuenta/bolsillo..."
                   value={formPocket}
                   onChange={(e) => setFormPocket(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
@@ -1642,11 +1666,6 @@ export default function TransactionsPage() {
                   {availablePockets.map((p) => (
                     <option key={p} value={p} />
                   ))}
-                  {!availablePockets.includes('Efectivo') && <option value="Efectivo" />}
-                  {!availablePockets.includes('Bancolombia') && <option value="Bancolombia" />}
-                  {!availablePockets.includes('Nequi') && <option value="Nequi" />}
-                  {!availablePockets.includes('Tarjeta de Crédito') && <option value="Tarjeta de Crédito" />}
-                  {!availablePockets.includes('Daviplata') && <option value="Daviplata" />}
                 </datalist>
               </div>
 
@@ -1776,11 +1795,30 @@ export default function TransactionsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cuenta / Bolsillo (Opcional)</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cuenta / Bolsillo de Pago u Origen</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['Efectivo', 'Bancolombia', 'Nequi', 'Tarjeta de Crédito', 'Daviplata', 'Ahorros'].map((preset) => {
+                    const isSelected = formPocket.trim().toLowerCase() === preset.toLowerCase()
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setFormPocket(isSelected ? '' : preset)}
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                            : 'bg-slate-950 hover:bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    )
+                  })}
+                </div>
                 <input
                   type="text"
                   list="pockets-edit-datalist"
-                  placeholder="Ej. Bancolombia, Nequi, Efectivo, Tarjeta..."
+                  placeholder="O escribe otra cuenta/bolsillo..."
                   value={formPocket}
                   onChange={(e) => setFormPocket(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
@@ -1789,11 +1827,6 @@ export default function TransactionsPage() {
                   {availablePockets.map((p) => (
                     <option key={p} value={p} />
                   ))}
-                  {!availablePockets.includes('Efectivo') && <option value="Efectivo" />}
-                  {!availablePockets.includes('Bancolombia') && <option value="Bancolombia" />}
-                  {!availablePockets.includes('Nequi') && <option value="Nequi" />}
-                  {!availablePockets.includes('Tarjeta de Crédito') && <option value="Tarjeta de Crédito" />}
-                  {!availablePockets.includes('Daviplata') && <option value="Daviplata" />}
                 </datalist>
               </div>
 
