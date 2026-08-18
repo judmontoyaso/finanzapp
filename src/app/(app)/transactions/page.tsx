@@ -141,6 +141,7 @@ export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [pocketFilter, setPocketFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
@@ -162,6 +163,7 @@ export default function TransactionsPage() {
   const [formCategory, setFormCategory] = useState('')
   const [formDesc, setFormDesc] = useState('')
   const [formAmount, setFormAmount] = useState('')
+  const [formPocket, setFormPocket] = useState('')
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
   const [formItems, setFormItems] = useState<TransactionItem[]>([])
   const [scanning, setScanning] = useState(false)
@@ -195,6 +197,7 @@ export default function TransactionsPage() {
     setFormCategory(defaultCat)
     setFormDesc('')
     setFormAmount('')
+    setFormPocket('')
     // Default a la fecha del mes seleccionado o hoy
     const now = new Date()
     const curYm = now.toISOString().slice(0, 7)
@@ -319,6 +322,22 @@ export default function TransactionsPage() {
     }
   }
 
+  // Lista de bolsillos / cuentas disponibles
+  const availablePockets = useMemo(() => {
+    const set = new Set<string>()
+    transactions.forEach(t => {
+      if (Array.isArray(t.details)) {
+        for (const it of t.details) {
+          if (it?.description && it.description.startsWith('Bolsillo:')) {
+            const pName = it.description.replace('Bolsillo:', '').trim()
+            if (pName) set.add(pName)
+          }
+        }
+      }
+    })
+    return Array.from(set).sort()
+  }, [transactions])
+
   const filteredTransactions = useMemo(() => {
     const filterCategoryIds = categoryFilter === 'all'
       ? null
@@ -335,6 +354,13 @@ export default function TransactionsPage() {
         const matchesType = typeFilter === 'all' || tx.type === typeFilter
         const matchesCategory = !filterCategoryIds || filterCategoryIds.has(tx.category_id)
         
+        let matchesPocket = true
+        if (pocketFilter && pocketFilter !== 'all') {
+          matchesPocket = !!tx.details?.some(
+            (it) => it.description && it.description.startsWith('Bolsillo:') && it.description.replace('Bolsillo:', '').trim().toLowerCase() === pocketFilter.toLowerCase()
+          )
+        }
+        
         let matchesStartDate = true
         if (startDate) {
           matchesStartDate = new Date(tx.date) >= new Date(startDate)
@@ -345,10 +371,10 @@ export default function TransactionsPage() {
           matchesEndDate = new Date(tx.date) <= new Date(endDate)
         }
 
-        return matchesSearch && matchesType && matchesCategory && matchesStartDate && matchesEndDate
+        return matchesSearch && matchesType && matchesCategory && matchesPocket && matchesStartDate && matchesEndDate
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [transactions, selectedMonth, searchTerm, typeFilter, categoryFilter, categories, startDate, endDate])
+  }, [transactions, selectedMonth, searchTerm, typeFilter, categoryFilter, pocketFilter, categories, startDate, endDate])
 
   // Estadísticas del mes / periodo seleccionado
   const monthStats = useMemo(() => {
@@ -450,10 +476,22 @@ export default function TransactionsPage() {
   const removeItem = (idx: number) => setFormItems((p) => p.filter((_, i) => i !== idx))
   const updateItem = (idx: number, patch: Partial<TransactionItem>) =>
     setFormItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
-  const cleanItems = () =>
-    formItems
+  const cleanItems = (pocketVal?: string) => {
+    let items = formItems
       .map((it) => ({ description: it.description.trim(), amount: Number(it.amount) || 0 }))
       .filter((it) => it.description || it.amount)
+
+    const pToUse = pocketVal !== undefined ? pocketVal : formPocket
+    if (pToUse && pToUse.trim()) {
+      items = items.filter(it => !it.description.startsWith('Bolsillo:'))
+      items.unshift({
+        description: `Bolsillo: ${pToUse.trim()}`,
+        amount: parseFloat(formAmount) || 0
+      })
+    }
+
+    return items.length > 0 ? items : undefined
+  }
   const itemsSum = formItems.reduce((s, it) => s + (Number(it.amount) || 0), 0)
 
   // Escanear recibo
@@ -612,6 +650,7 @@ export default function TransactionsPage() {
     setSearchTerm('')
     setTypeFilter('all')
     setCategoryFilter('all')
+    setPocketFilter('all')
     setStartDate('')
     setEndDate('')
     setCurrentPage(1)
@@ -653,7 +692,9 @@ export default function TransactionsPage() {
     setFormDesc(tx.description)
     setFormAmount(String(tx.amount))
     setFormDate(tx.date)
-    setFormItems(tx.details ? [...tx.details] : [])
+    const pocketItem = tx.details?.find(d => d.description.startsWith('Bolsillo:'))
+    setFormPocket(pocketItem ? pocketItem.description.replace('Bolsillo:', '').trim() : '')
+    setFormItems(tx.details ? tx.details.filter(d => !d.description.startsWith('Bolsillo:')) : [])
     setAiNewCategory(null)
     setIsEditModalOpen(true)
   }
@@ -1011,7 +1052,7 @@ export default function TransactionsPage() {
 
         {/* Filtros avanzados colapsables */}
         {filtersOpen && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80 animate-fadeIn">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-800/80 animate-fadeIn">
             <div>
               <label className="block text-[10px] font-semibold text-slate-400 mb-1">Tipo</label>
               <select
@@ -1057,7 +1098,21 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Desde Fecha Específica</label>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Cuenta / Bolsillo</label>
+              <select
+                value={pocketFilter}
+                onChange={(e) => { setPocketFilter(e.target.value); setCurrentPage(1); }}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-md py-1.5 px-2.5 text-xs focus:border-emerald-500 outline-none cursor-pointer"
+              >
+                <option value="all">Todos los Bolsillos {availablePockets.length > 0 ? `(${availablePockets.length})` : ''}</option>
+                {availablePockets.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">Desde Fecha</label>
               <input
                 type="date"
                 value={startDate}
@@ -1620,6 +1675,28 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cuenta / Bolsillo (Opcional)</label>
+                <input
+                  type="text"
+                  list="pockets-add-datalist"
+                  placeholder="Ej. Bancolombia, Nequi, Efectivo, Tarjeta..."
+                  value={formPocket}
+                  onChange={(e) => setFormPocket(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                />
+                <datalist id="pockets-add-datalist">
+                  {availablePockets.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                  {!availablePockets.includes('Efectivo') && <option value="Efectivo" />}
+                  {!availablePockets.includes('Bancolombia') && <option value="Bancolombia" />}
+                  {!availablePockets.includes('Nequi') && <option value="Nequi" />}
+                  {!availablePockets.includes('Tarjeta de Crédito') && <option value="Tarjeta de Crédito" />}
+                  {!availablePockets.includes('Daviplata') && <option value="Daviplata" />}
+                </datalist>
+              </div>
+
               {itemsEditor}
 
               <div className="flex justify-end gap-3 pt-4">
@@ -1743,6 +1820,28 @@ export default function TransactionsPage() {
                     )}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cuenta / Bolsillo (Opcional)</label>
+                <input
+                  type="text"
+                  list="pockets-edit-datalist"
+                  placeholder="Ej. Bancolombia, Nequi, Efectivo, Tarjeta..."
+                  value={formPocket}
+                  onChange={(e) => setFormPocket(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-md py-2 px-3 text-xs focus:border-emerald-500 outline-none transition-all"
+                />
+                <datalist id="pockets-edit-datalist">
+                  {availablePockets.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                  {!availablePockets.includes('Efectivo') && <option value="Efectivo" />}
+                  {!availablePockets.includes('Bancolombia') && <option value="Bancolombia" />}
+                  {!availablePockets.includes('Nequi') && <option value="Nequi" />}
+                  {!availablePockets.includes('Tarjeta de Crédito') && <option value="Tarjeta de Crédito" />}
+                  {!availablePockets.includes('Daviplata') && <option value="Daviplata" />}
+                </datalist>
               </div>
 
               {itemsEditor}

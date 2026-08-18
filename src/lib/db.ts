@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { Category, Transaction, Budget, Workspace, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency, ReportSettings } from '@/types'
+import { Category, Transaction, Budget, Workspace, WorkspaceOverview, PocketSummary, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency, ReportSettings } from '@/types'
 
 // Mock User Type
 export type User = {
@@ -177,30 +177,101 @@ export const LocalDB = {
     return workspaces as Workspace[]
   },
 
-  // Resumen del mes actual por cada espacio accesible (para el panel general)
-  async getWorkspacesOverview(): Promise<(Workspace & { isOwner: boolean; income: number; expense: number; net: number })[]> {
+  // Resumen del mes actual por cada espacio accesible y sus cuentas/bolsillos
+  async getWorkspacesOverview(): Promise<WorkspaceOverview[]> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
     const wss = await this.getWorkspaces()
     const monthStart = new Date().toISOString().substring(0, 7) + '-01'
 
+    // Movimientos del mes para balances mensuales
     const { data: txs } = await supabase
       .from('transactions')
-      .select('workspace_id, type, amount')
+      .select('workspace_id, type, amount, details')
       .gte('date', monthStart)
 
-    const agg = new Map<string, { income: number; expense: number }>()
+    // Movimientos históricos para descubrir todos los bolsillos existentes en cada espacio
+    const { data: allTxs } = await supabase
+      .from('transactions')
+      .select('workspace_id, details')
+      .limit(1000)
+
+    const agg = new Map<string, {
+      income: number
+      expense: number
+      pockets: Map<string, { income: number; expense: number; count: number }>
+    }>()
+
+    // 1. Inicializar bolsillos conocidos desde el histórico
+    ;(allTxs || []).forEach((t) => {
+      let cur = agg.get(t.workspace_id)
+      if (!cur) {
+        cur = { income: 0, expense: 0, pockets: new Map() }
+        agg.set(t.workspace_id, cur)
+      }
+
+      if (Array.isArray(t.details)) {
+        for (const item of t.details) {
+          if (item?.description && item.description.startsWith('Bolsillo:')) {
+            const pName = item.description.replace('Bolsillo:', '').trim()
+            if (pName && !cur.pockets.has(pName)) {
+              cur.pockets.set(pName, { income: 0, expense: 0, count: 0 })
+            }
+          }
+        }
+      }
+    })
+
+    // 2. Acumular transacciones del mes
     ;(txs || []).forEach((t) => {
-      const cur = agg.get(t.workspace_id) || { income: 0, expense: 0 }
-      if (t.type === 'income') cur.income += Number(t.amount)
-      else cur.expense += Number(t.amount)
-      agg.set(t.workspace_id, cur)
+      let cur = agg.get(t.workspace_id)
+      if (!cur) {
+        cur = { income: 0, expense: 0, pockets: new Map() }
+        agg.set(t.workspace_id, cur)
+      }
+      const amt = Number(t.amount) || 0
+      if (t.type === 'income') cur.income += amt
+      else cur.expense += amt
+
+      let pocketName = 'Cuenta Principal'
+      if (Array.isArray(t.details) && t.details.length > 0) {
+        for (const item of t.details) {
+          if (item?.description && item.description.startsWith('Bolsillo:')) {
+            pocketName = item.description.replace('Bolsillo:', '').trim()
+            break
+          }
+        }
+      }
+
+      let p = cur.pockets.get(pocketName)
+      if (!p) {
+        p = { income: 0, expense: 0, count: 0 }
+        cur.pockets.set(pocketName, p)
+      }
+      if (t.type === 'income') p.income += amt
+      else p.expense += amt
+      p.count += 1
     })
 
     return wss.map((w) => {
-      const a = agg.get(w.id) || { income: 0, expense: 0 }
-      return { ...w, isOwner: w.user_id === user.id, income: a.income, expense: a.expense, net: a.income - a.expense }
+      const a = agg.get(w.id) || { income: 0, expense: 0, pockets: new Map() }
+      const pocketsList: PocketSummary[] = Array.from(a.pockets.entries()).map(([name, p]) => ({
+        name,
+        income: p.income,
+        expense: p.expense,
+        net: p.income - p.expense,
+        count: p.count
+      })).sort((x, y) => (y.income + y.expense) - (x.income + x.expense))
+
+      return {
+        ...w,
+        isOwner: w.user_id === user.id,
+        income: a.income,
+        expense: a.expense,
+        net: a.income - a.expense,
+        pockets: pocketsList
+      }
     })
   },
 

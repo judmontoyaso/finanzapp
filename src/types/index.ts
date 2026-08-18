@@ -1,9 +1,25 @@
+export type PocketSummary = {
+  name: string
+  income: number
+  expense: number
+  net: number
+  count: number
+}
+
 export type Workspace = {
   id: string
   name: string
   user_id: string
   type?: 'personal' | 'home' | 'business' | 'other'
   created_at: string
+}
+
+export type WorkspaceOverview = Workspace & {
+  isOwner: boolean
+  income: number
+  expense: number
+  net: number
+  pockets: PocketSummary[]
 }
 
 export type WorkspaceMember = {
