@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { Category, Transaction, Budget, Workspace, WorkspaceOverview, PocketSummary, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency, ReportSettings } from '@/types'
+import { Category, Transaction, TransactionItem, Budget, Workspace, WorkspaceOverview, PocketSummary, SavingsGoal, WorkspaceMember, RecurringTransaction, RecurringFrequency, ReportSettings } from '@/types'
 
 // Mock User Type
 export type User = {
@@ -316,8 +316,9 @@ export const LocalDB = {
       const pocketCounts = new Map<string, number>()
 
       ;(allTxs || []).forEach(tx => {
-        if (Array.isArray(tx.details)) {
-          for (const item of tx.details) {
+        const detailsList = tx.details as TransactionItem[] | undefined
+        if (Array.isArray(detailsList)) {
+          for (const item of detailsList) {
             if (item?.description && item.description.startsWith('Bolsillo:')) {
               const rawName = item.description.replace('Bolsillo:', '').trim()
               if (rawName && !wsNames.has(rawName.toLowerCase()) && rawName !== 'Cuenta Principal') {
@@ -349,11 +350,14 @@ export const LocalDB = {
 
     for (const tx of allTxs) {
       if (tx.workspace_id === targetWorkspaceId) continue
-      if (Array.isArray(tx.details)) {
-        const hasPocket = tx.details.some(d =>
-          d?.description &&
-          d.description.startsWith('Bolsillo:') &&
-          d.description.replace('Bolsillo:', '').trim().toLowerCase() === pLower
+      const detailsList = tx.details as TransactionItem[] | undefined
+      if (Array.isArray(detailsList)) {
+        const hasPocket = detailsList.some((d: TransactionItem) =>
+          Boolean(
+            d?.description &&
+            d.description.startsWith('Bolsillo:') &&
+            d.description.replace('Bolsillo:', '').trim().toLowerCase() === pLower
+          )
         )
         if (hasPocket) {
           await supabase
