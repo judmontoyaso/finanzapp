@@ -281,7 +281,18 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // --- COMPUTCIONES DE ESTADÍSTICAS DEL MES ACTUAL ---
+  // --- COMPUTACIONES HISTÓRICAS GENERALES (TODO EL ESPACIO) ---
+  const allTimeIncome = transactions
+    .filter(tx => tx.type === 'income')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  const allTimeExpense = transactions
+    .filter(tx => tx.type === 'expense')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  const allTimeNetBalance = allTimeIncome - allTimeExpense
+
+  // --- COMPUTACIONES DE ESTADÍSTICAS DEL MES ACTUAL ---
   const today = new Date()
   const currentMonthKey = today.toISOString().substring(0, 7) // YYYY-MM
 
@@ -384,46 +395,80 @@ export default function DashboardPage() {
 
   const widgetNodes: Record<string, React.ReactNode> = {
     metrics: (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
           <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ingresos del Mes</span>
-              <p className="text-xl font-extrabold text-emerald-400 mt-1.5">${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Saldo Neto General</span>
+              <p className={`text-lg sm:text-xl font-extrabold mt-1.5 truncate ${allTimeNetBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                ${allTimeNetBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              </p>
             </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/money-flow.png" alt="" className="w-7 h-7 object-contain" /></div>
+            <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
+              <img src="/icons/gold-ingots.png" alt="" className="w-6 h-6 object-contain" />
+            </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total bruto recibido</p>
+          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Total histórico acumulado</p>
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
           <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gastos del Mes</span>
-              <p className="text-xl font-extrabold text-rose-400 mt-1.5">${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Balance del Mes</span>
+              <p className={`text-lg sm:text-xl font-extrabold mt-1.5 truncate ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>
+                ${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              </p>
             </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/invoice.png" alt="" className="w-7 h-7 object-contain" /></div>
+            <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
+              <img src="/icons/wallet.png" alt="" className="w-6 h-6 object-contain" />
+            </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Total gastado acumulado</p>
+          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Diferencia neta mensual</p>
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
           <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Balance de Caja</span>
-              <p className={`text-xl font-extrabold mt-1.5 ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Ingresos del Mes</span>
+              <p className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1.5 truncate">
+                ${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              </p>
             </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/wallet.png" alt="" className="w-7 h-7 object-contain" /></div>
+            <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
+              <img src="/icons/money-flow.png" alt="" className="w-6 h-6 object-contain" />
+            </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Diferencia neta</p>
+          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Total bruto recibido</p>
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-md p-5 shadow-sm">
+
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
           <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tasa de Ahorro</span>
-              <p className="text-xl font-extrabold text-blue-400 mt-1.5">{savingsRate >= 0 ? `${savingsRate.toFixed(1)}%` : '0.0%'}</p>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Gastos del Mes</span>
+              <p className="text-lg sm:text-xl font-extrabold text-rose-400 mt-1.5 truncate">
+                ${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              </p>
             </div>
-            <div className="w-11 h-11 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0"><img src="/icons/forecast.png" alt="" className="w-7 h-7 object-contain" /></div>
+            <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
+              <img src="/icons/invoice.png" alt="" className="w-6 h-6 object-contain" />
+            </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-3 font-semibold">Proporción de ahorro</p>
+          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Total gastado mensual</p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-md p-4 sm:p-5 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Tasa de Ahorro</span>
+              <p className="text-lg sm:text-xl font-extrabold text-blue-400 mt-1.5 truncate">
+                {savingsRate >= 0 ? `${savingsRate.toFixed(1)}%` : '0.0%'}
+              </p>
+            </div>
+            <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
+              <img src="/icons/forecast.png" alt="" className="w-6 h-6 object-contain" />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-2.5 font-semibold">Proporción de ahorro</p>
         </div>
       </div>
     ),
@@ -566,17 +611,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setEditingLayout((v) => !v)}
-            className={`inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-md font-bold text-xs border transition-all cursor-pointer ${editingLayout ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'}`}
+            className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-md font-bold text-xs border transition-all cursor-pointer ${editingLayout ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'}`}
           >
             {editingLayout ? <><FiCheck className="w-4 h-4" /> Listo</> : <><FiMove className="w-4 h-4" /> Editar diseño</>}
           </button>
-          <Link
-            href="/transactions"
-            className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md font-bold text-xs transition-all duration-150 active:scale-[0.99]"
-          >
-            <FiPlus className="w-4 h-4" />
-            Nueva Transacción
-          </Link>
         </div>
       </div>
 
@@ -619,32 +657,38 @@ export default function DashboardPage() {
       {/* SECCIÓN: MIS ESPACIOS */}
       {overview.length > 0 && (
         <details open className="group bg-slate-900 border border-slate-800 rounded-md shadow-sm overflow-hidden">
-          <summary className="list-none cursor-pointer px-5 py-4 flex items-center justify-between hover:bg-slate-850/40 transition-colors">
-            <div className="flex items-start gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></span>
+          <summary className="list-none cursor-pointer px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-850/40 transition-colors border-b border-transparent group-open:border-slate-800/60">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                <FiUsers className="w-4 h-4" />
+              </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
+                  <h3 className="text-sm font-bold text-slate-100 tracking-wide">
                     Mis Espacios
                   </h3>
-                  <span className="text-[10px] bg-slate-950 border border-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full">
-                    {overview.length} espacio{overview.length > 1 ? 's' : ''}
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                    {overview.length}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Cambiar, editar o crear espacios independientes para organizar tus finanzas.
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Administra y alterna entre tus espacios financieros independientes.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+
+            <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); setIsAddAccountOpen(true); }}
-                className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-1.5 rounded transition-colors cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-all cursor-pointer shadow-xs"
               >
-                <FiPlus className="w-3.5 h-3.5" /> Nuevo Espacio
+                <FiPlus className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Nuevo Espacio</span>
               </button>
-              <FiChevronDown className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" />
+              <div className="w-7 h-7 rounded-md bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-slate-200 transition-colors">
+                <FiChevronDown className="w-4 h-4 transition-transform duration-200 group-open:rotate-180" />
+              </div>
             </div>
           </summary>
 

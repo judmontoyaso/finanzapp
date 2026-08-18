@@ -378,6 +378,23 @@ export default function TransactionsPage() {
     }
   }, [filteredTransactions])
 
+  // Estadísticas históricas generales (todo el espacio)
+  const allTimeStats = useMemo(() => {
+    let income = 0
+    let expense = 0
+    transactions.forEach(t => {
+      const amt = Math.abs(t.amount)
+      if (t.type === 'income') income += amt
+      else expense += amt
+    })
+    return {
+      income,
+      expense,
+      netBalance: income - expense,
+      count: transactions.length
+    }
+  }, [transactions])
+
   // Paginación de transacciones para vista lista
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage) || 1
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -805,11 +822,37 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Resumen del Mes Seleccionado */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Resumen de Métricas */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
-              <FiTrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> <span className="truncate">Ingresos</span>
+              <FiDollarSign className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> <span className="truncate">Saldo Neto General</span>
+            </span>
+            <p 
+              className={`text-sm sm:text-base xl:text-lg font-black mt-1 truncate ${allTimeStats.netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} 
+              title={`${allTimeStats.netBalance >= 0 ? '+' : '-'}$${Math.abs(allTimeStats.netBalance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
+              {allTimeStats.netBalance >= 0 ? '+' : '-'}${Math.abs(allTimeStats.netBalance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Total histórico</span>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <FiDollarSign className="w-3.5 h-3.5 text-teal-400 shrink-0" /> <span className="truncate">Balance del Mes</span>
+            </span>
+            <p 
+              className={`text-sm sm:text-base xl:text-lg font-black mt-1 truncate ${monthStats.balance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}
+              title={`${monthStats.balance >= 0 ? '+' : '-'}$${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
+              {monthStats.balance >= 0 ? '+' : '-'}${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Neto del periodo</span>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <FiTrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> <span className="truncate">Ingresos Mes</span>
             </span>
             <p 
               className="text-sm sm:text-base xl:text-lg font-black text-emerald-400 mt-1 truncate" 
@@ -817,11 +860,12 @@ export default function TransactionsPage() {
             >
               +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
+            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Entradas</span>
           </div>
 
           <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
-              <FiTrendingDown className="w-3.5 h-3.5 text-rose-400 shrink-0" /> <span className="truncate">Gastos</span>
+              <FiTrendingDown className="w-3.5 h-3.5 text-rose-400 shrink-0" /> <span className="truncate">Gastos Mes</span>
             </span>
             <p 
               className="text-sm sm:text-base xl:text-lg font-black text-rose-400 mt-1 truncate" 
@@ -829,18 +873,7 @@ export default function TransactionsPage() {
             >
               -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-          </div>
-
-          <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 truncate">
-              <FiDollarSign className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span className="truncate">Balance Neto</span>
-            </span>
-            <p 
-              className={`text-sm sm:text-base xl:text-lg font-black mt-1 truncate ${monthStats.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
-              title={`${monthStats.balance >= 0 ? '+' : '-'}$${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            >
-              {monthStats.balance >= 0 ? '+' : '-'}${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
+            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Salidas</span>
           </div>
 
           <div className="bg-slate-950 border border-slate-850 rounded-md p-3 sm:p-3.5 min-w-0 overflow-hidden">
@@ -848,8 +881,9 @@ export default function TransactionsPage() {
               <FiGrid className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span className="truncate">Movimientos</span>
             </span>
             <p className="text-sm sm:text-base xl:text-lg font-black text-slate-200 mt-1 truncate">
-              {monthStats.count} <span className="text-xs font-normal text-slate-500">registros</span>
+              {monthStats.count} <span className="text-xs font-normal text-slate-500">en mes</span>
             </p>
+            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">{allTimeStats.count} en total</span>
           </div>
         </div>
       </div>
