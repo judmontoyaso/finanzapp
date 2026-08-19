@@ -6,6 +6,7 @@ import { Category, Budget, Transaction } from '@/types'
 import { toast } from 'react-hot-toast'
 import { FiEdit, FiPlus, FiX, FiChevronDown, FiChevronUp, FiSearch, FiSliders, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 import CategoryIcon from '@/components/CategoryIcon'
+import { formatCurrency } from '@/lib/format'
 
 export default function BudgetsPage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -267,13 +268,13 @@ export default function BudgetsPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Presupuesto Mensual Total</span>
             <p className="text-2xl font-extrabold text-slate-100 mt-1">
-              ${totalBudgeted.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              {formatCurrency(totalBudgeted)}
             </p>
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Gastado en Categorías con Meta</span>
             <p className="text-2xl font-extrabold text-rose-400 mt-1">
-              ${totalSpentInBudgets.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              {formatCurrency(totalSpentInBudgets)}
             </p>
           </div>
           <div>
@@ -301,7 +302,7 @@ export default function BudgetsPage() {
             </div>
             <div className="flex justify-between text-[9px] text-slate-500 font-semibold">
               <span>0% consumido</span>
-              <span>100% límite mensual (${totalBudgeted.toLocaleString('es-ES', { minimumFractionDigits: 2 })})</span>
+              <span>100% límite mensual ({formatCurrency(totalBudgeted)})</span>
             </div>
           </div>
         )}
@@ -406,7 +407,7 @@ export default function BudgetsPage() {
                         {/* Rótulo de desglose */}
                         <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap items-center gap-2">
                           {hasParentBudget ? (
-                            <span>Meta global grupo: <strong className="text-slate-200">${group.parentDirectBudget.toLocaleString()}</strong></span>
+                            <span>Meta global grupo: <strong className="text-slate-200">{formatCurrency(group.parentDirectBudget)}</strong></span>
                           ) : (
                             <span className="text-slate-500 italic">Sin meta global asignada al grupo</span>
                           )}
@@ -414,7 +415,7 @@ export default function BudgetsPage() {
                             <>
                               <span className="text-slate-700">•</span>
                               <span className="text-emerald-400">
-                                Asignado en subcategorías: <strong>${group.sumOfSubcatBudgets.toLocaleString()}</strong>
+                                Asignado en subcategorías: <strong>{formatCurrency(group.sumOfSubcatBudgets)}</strong>
                               </span>
                             </>
                           )}
@@ -451,21 +452,21 @@ export default function BudgetsPage() {
                     <div>
                       <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gastado Total Grupo</span>
                       <span className={`text-sm font-bold block mt-0.5 ${group.isOverBudget ? 'text-rose-400' : 'text-slate-200'}`}>
-                        ${group.totalGroupSpent.toLocaleString()}
+                        {formatCurrency(group.totalGroupSpent)}
                       </span>
                     </div>
 
                     <div>
                       <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Límite Total Grupo</span>
                       <span className="text-sm font-bold block mt-0.5 text-slate-300">
-                        {hasEffectiveBudget ? `$${group.effectiveGroupBudget.toLocaleString()}` : '--'}
+                        {hasEffectiveBudget ? formatCurrency(group.effectiveGroupBudget) : '--'}
                       </span>
                     </div>
 
                     <div>
                       <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Disponible</span>
                       <span className="text-sm font-bold block mt-0.5 text-emerald-400">
-                        {hasEffectiveBudget ? `$${remaining.toLocaleString()}` : '--'}
+                        {hasEffectiveBudget ? formatCurrency(remaining) : '--'}
                       </span>
                     </div>
 
@@ -552,7 +553,7 @@ export default function BudgetsPage() {
                                       ></div>
                                     </div>
                                     <span className="text-[9px] text-slate-500 font-semibold shrink-0">
-                                      Disp: ${subRemaining.toLocaleString()}
+                                      Disp: {formatCurrency(subRemaining)}
                                     </span>
                                   </div>
                                 )}
@@ -563,10 +564,10 @@ export default function BudgetsPage() {
                             <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/40">
                               <div className="text-left sm:text-right">
                                 <div className="text-xs font-bold text-slate-200">
-                                  Gastado: <span className={sub.isOverBudget ? 'text-rose-400' : 'text-slate-200'}>${sub.spent.toLocaleString()}</span>
+                                  Gastado: <span className={sub.isOverBudget ? 'text-rose-400' : 'text-slate-200'}>{formatCurrency(sub.spent)}</span>
                                 </div>
                                 <div className="text-[10px] text-slate-500 font-medium">
-                                  Meta: {hasSubBudget ? `$${sub.budgetAmount.toLocaleString()}` : '--'}
+                                  Meta: {hasSubBudget ? formatCurrency(sub.budgetAmount) : '--'}
                                 </div>
                               </div>
 
@@ -588,7 +589,7 @@ export default function BudgetsPage() {
                     {group.parentDirectSpent > 0 && (
                       <div className="p-2.5 bg-slate-900/40 border border-slate-800/60 rounded-md flex items-center justify-between text-xs text-slate-400">
                         <span>Gastos registrados directamente en {group.parent.name}:</span>
-                        <strong className="text-slate-200">${group.parentDirectSpent.toLocaleString()}</strong>
+                        <strong className="text-slate-200">{formatCurrency(group.parentDirectSpent)}</strong>
                       </div>
                     )}
                   </div>

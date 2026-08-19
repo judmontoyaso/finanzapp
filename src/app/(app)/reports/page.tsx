@@ -13,6 +13,7 @@ import {
   FiActivity
 } from 'react-icons/fi'
 import CategoryIcon from '@/components/CategoryIcon'
+import { formatCurrency } from '@/lib/format'
 
 const COLORS = [
   '#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', 
@@ -234,10 +235,6 @@ export default function ReportsPage() {
       ...prev,
       [catId]: !prev[catId]
     }))
-  }
-
-  const formatCurrency = (val: number) => {
-    return '$' + val.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
   const formatMonthName = (date: Date) => {
@@ -716,7 +713,7 @@ export default function ReportsPage() {
                                     </div>
 
                                     <span className={`text-xs font-bold shrink-0 ${activeTab === 'expense' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                      {activeTab === 'expense' ? '-' : '+'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                      {formatCurrency(tx.amount, { type: activeTab })}
                                     </span>
                                   </div>
                                 )

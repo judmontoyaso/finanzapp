@@ -7,6 +7,7 @@ import { LocalDB, WorkspaceType } from '@/lib/db'
 import { Transaction, Category, Budget, RecurringTransaction, WorkspaceOverview, WorkspaceMember } from '@/types'
 import DashboardCharts from '@/components/DashboardCharts'
 import { getWorkspaceAccountMeta, WS_TYPES } from '@/lib/workspaceMeta'
+import { formatCurrency } from '@/lib/format'
 import {
   FiPlus,
   FiRepeat,
@@ -401,7 +402,7 @@ export default function DashboardPage() {
             <div className="min-w-0 flex-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Saldo Neto General</span>
               <p className={`text-lg sm:text-xl font-extrabold mt-1.5 truncate ${allTimeNetBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                ${allTimeNetBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                {formatCurrency(allTimeNetBalance, { showSign: true })}
               </p>
             </div>
             <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
@@ -416,7 +417,7 @@ export default function DashboardPage() {
             <div className="min-w-0 flex-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Balance del Mes</span>
               <p className={`text-lg sm:text-xl font-extrabold mt-1.5 truncate ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>
-                ${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                {formatCurrency(netBalance, { showSign: true })}
               </p>
             </div>
             <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
@@ -431,7 +432,7 @@ export default function DashboardPage() {
             <div className="min-w-0 flex-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Ingresos del Mes</span>
               <p className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1.5 truncate">
-                ${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                {formatCurrency(totalIncome, { type: 'income' })}
               </p>
             </div>
             <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
@@ -446,7 +447,7 @@ export default function DashboardPage() {
             <div className="min-w-0 flex-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Gastos del Mes</span>
               <p className="text-lg sm:text-xl font-extrabold text-rose-400 mt-1.5 truncate">
-                ${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                {formatCurrency(totalExpense, { type: 'expense' })}
               </p>
             </div>
             <div className="w-10 h-10 bg-slate-800/50 rounded-md flex items-center justify-center flex-shrink-0 ml-2">
@@ -478,12 +479,12 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ingresos</span>
-            <p className="text-lg font-extrabold text-slate-100">${totalIncome.toLocaleString('es-ES')}</p>
+            <p className="text-lg font-extrabold text-slate-100">{formatCurrency(totalIncome)}</p>
             <DeltaBadge delta={incomeDelta} />
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Gastos</span>
-            <p className="text-lg font-extrabold text-slate-100">${totalExpense.toLocaleString('es-ES')}</p>
+            <p className="text-lg font-extrabold text-slate-100">{formatCurrency(totalExpense)}</p>
             <DeltaBadge delta={expenseDelta} invert />
           </div>
           <div>
@@ -491,7 +492,7 @@ export default function DashboardPage() {
             {topCat ? (
               <>
                 <p className="text-lg font-extrabold text-slate-100 truncate">{topCat.name}</p>
-                <span className="text-[10px] font-bold text-rose-400">${topCat.amount.toLocaleString('es-ES')}</span>
+                <span className="text-[10px] font-bold text-rose-400">{formatCurrency(topCat.amount)}</span>
               </>
             ) : (
               <p className="text-xs text-slate-500 italic mt-1">Sin gastos este mes</p>
@@ -512,16 +513,16 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Balance actual</span>
-            <p className={`text-lg font-extrabold ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>${netBalance.toLocaleString('es-ES')}</p>
+            <p className={`text-lg font-extrabold ${netBalance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}>{formatCurrency(netBalance, { showSign: true })}</p>
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Recurrentes por venir</span>
-            <p className="text-xs font-bold text-emerald-400">+${upIncome.toLocaleString('es-ES')}</p>
-            <p className="text-xs font-bold text-rose-400">−${upExpense.toLocaleString('es-ES')}</p>
+            <p className="text-xs font-bold text-emerald-400">{formatCurrency(upIncome, { type: 'income' })}</p>
+            <p className="text-xs font-bold text-rose-400">{formatCurrency(upExpense, { type: 'expense' })}</p>
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Proyección fin de mes</span>
-            <p className={`text-lg font-extrabold ${projectedEom >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>${projectedEom.toLocaleString('es-ES')}</p>
+            <p className={`text-lg font-extrabold ${projectedEom >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(projectedEom, { showSign: true })}</p>
           </div>
         </div>
         {upcomingRec.length === 0 && (
@@ -555,7 +556,7 @@ export default function DashboardPage() {
                 <div key={b.id} className="space-y-1.5">
                   <div className="flex justify-between text-xs font-semibold text-slate-300">
                     <span>{b.categoryName}</span>
-                    <span className={textColor}>${b.spent.toLocaleString()} / <span className="text-slate-500">${b.amount.toLocaleString()}</span></span>
+                    <span className={textColor}>{formatCurrency(b.spent)} / <span className="text-slate-500">{formatCurrency(b.amount)}</span></span>
                   </div>
                   <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
                     <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${percent}%` }}></div>
@@ -587,7 +588,7 @@ export default function DashboardPage() {
                     <p className="text-xs font-bold text-slate-100 truncate leading-tight">{tx.description}</p>
                     <p className="text-[10px] text-slate-500 mt-0.5">{category ? category.name : 'Sin categoría'} · {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</p>
                   </div>
-                  <span className={`text-xs font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>{isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                  <span className={`text-xs font-extrabold whitespace-nowrap ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(tx.amount, { type: isIncome ? 'income' : 'expense' })}</span>
                 </div>
               )
             })}
@@ -781,12 +782,12 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[10px] text-slate-400 font-semibold uppercase">Balance del Mes</span>
                           <span className={`text-base font-extrabold ${w.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            ${w.net.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                            {formatCurrency(w.net, { showSign: true })}
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-800/60">
-                          <span>Ingresos: <strong className="text-slate-300">+${w.income.toLocaleString('es-ES')}</strong></span>
-                          <span>Gastos: <strong className="text-slate-300">-${w.expense.toLocaleString('es-ES')}</strong></span>
+                          <span>Ingresos: <strong className="text-slate-300">{formatCurrency(w.income, { type: 'income' })}</strong></span>
+                          <span>Gastos: <strong className="text-slate-300">{formatCurrency(w.expense, { type: 'expense' })}</strong></span>
                         </div>
                       </div>
                     </div>

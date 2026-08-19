@@ -174,6 +174,9 @@ export const LocalDB = {
       }
     }
 
+    // Ejecutar reconciliación de bolsillos y espacios en segundo plano
+    this.reconcileAllWorkspacesAndPockets().catch(() => {})
+
     return workspaces as Workspace[]
   },
 
@@ -461,24 +464,44 @@ export const LocalDB = {
     let count = 0
     const pLower = pocketName.trim().toLowerCase()
 
+    const isMatch = (pocket: string) => {
+      const p = pocket.toLowerCase().trim()
+      if (p === pLower) return true
+      if (p === pLower + 's' || p + 's' === pLower) return true
+      if (pLower === 'ahorro' && (p.includes('ahorro') || p.includes('ahorros'))) return true
+      if (pLower === 'ahorros' && (p.includes('ahorro') || p.includes('ahorros'))) return true
+      if (pLower === 'cash' && (p.includes('cash') || p.includes('efectivo'))) return true
+      if (pLower === 'efectivo' && (p.includes('cash') || p.includes('efectivo'))) return true
+      if (pLower.length >= 4 && (p.includes(pLower) || pLower.includes(p))) return true
+      return false
+    }
+
     for (const tx of allTxs) {
       if (tx.workspace_id === targetWorkspaceId) continue
       const detailsList = tx.details as TransactionItem[] | undefined
+      let matched = false
       if (Array.isArray(detailsList)) {
-        const hasPocket = detailsList.some((d: TransactionItem) =>
-          Boolean(
-            d?.description &&
-            d.description.startsWith('Bolsillo:') &&
-            d.description.replace('Bolsillo:', '').trim().toLowerCase() === pLower
-          )
-        )
-        if (hasPocket) {
-          await supabase
-            .from('transactions')
-            .update({ workspace_id: targetWorkspaceId })
-            .eq('id', tx.id)
-          count++
+        matched = detailsList.some((d: TransactionItem) => {
+          if (!d?.description || !d.description.startsWith('Bolsillo:')) return false
+          const rawP = d.description.replace('Bolsillo:', '').trim()
+          return isMatch(rawP)
+        })
+      }
+
+      // Si la descripción original o concepto hace referencia explícita al bolsillo
+      if (!matched && tx.description) {
+        const desc = tx.description.toLowerCase()
+        if (pLower.length >= 4 && (desc.includes(`[${pLower}]`) || desc.includes(`(${pLower})`) || desc.includes(`cuenta ${pLower}`) || desc.includes(`cuenta de ${pLower}`))) {
+          matched = true
         }
+      }
+
+      if (matched) {
+        await supabase
+          .from('transactions')
+          .update({ workspace_id: targetWorkspaceId })
+          .eq('id', tx.id)
+        count++
       }
     }
 
@@ -486,6 +509,35 @@ export const LocalDB = {
       this.dispatchEvent()
     }
     return count
+  },
+
+  async reconcileAllWorkspacesAndPockets(): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: workspaces } = await supabase
+        .from('workspaces')
+        .select('*')
+
+      if (!workspaces || workspaces.length === 0) return
+
+      const primaryWs = workspaces.find(w => w.name.toLowerCase().includes('personal') || w.name.toLowerCase().includes('finanzas')) || workspaces[0]
+
+      // 1. Asignar transacciones con workspace_id nulo al espacio principal
+      if (primaryWs) {
+        await supabase
+          .from('transactions')
+          .update({ workspace_id: primaryWs.id })
+          .is('workspace_id', null)
+      }
+
+      // 2. Sincronizar transacciones de bolsillos con sus respectivos espacios existentes
+      for (const ws of workspaces) {
+        if (ws.id === primaryWs?.id) continue
+        await this.migratePocketTransactionsToWorkspace(ws.name, ws.id)
+      }
+    } catch {}
   },
 
   // --- WORKSPACE MEMBERS (compartir por email) ---

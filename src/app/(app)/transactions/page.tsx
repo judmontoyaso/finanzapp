@@ -26,6 +26,7 @@ import {
   FiGrid
 } from 'react-icons/fi'
 import CategoryIcon from '@/components/CategoryIcon'
+import { formatCurrency } from '@/lib/format'
 
 // Nombres de meses en español
 const MONTH_NAMES = [
@@ -688,7 +689,7 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-semibold text-slate-400">Detalle (opcional)</label>
         <span className="text-[10px] text-slate-500">
-          Suma ítems: <span className="font-bold text-slate-300">${itemsSum.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+          Suma ítems: <span className="font-bold text-slate-300">{formatCurrency(itemsSum)}</span>
         </span>
       </div>
       <div className="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1">
@@ -830,9 +831,9 @@ export default function TransactionsPage() {
             </span>
             <p 
               className={`text-sm sm:text-base xl:text-lg font-black mt-1 truncate ${allTimeStats.netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} 
-              title={`${allTimeStats.netBalance >= 0 ? '+' : '-'}$${Math.abs(allTimeStats.netBalance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              title={formatCurrency(allTimeStats.netBalance, { showSign: true })}
             >
-              {allTimeStats.netBalance >= 0 ? '+' : '-'}${Math.abs(allTimeStats.netBalance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(allTimeStats.netBalance, { showSign: true })}
             </p>
             <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">En este espacio</span>
           </div>
@@ -843,9 +844,9 @@ export default function TransactionsPage() {
             </span>
             <p 
               className={`text-sm sm:text-base xl:text-lg font-black mt-1 truncate ${monthStats.balance >= 0 ? 'text-teal-400' : 'text-amber-400'}`}
-              title={`${monthStats.balance >= 0 ? '+' : '-'}$${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              title={formatCurrency(monthStats.balance, { showSign: true })}
             >
-              {monthStats.balance >= 0 ? '+' : '-'}${Math.abs(monthStats.balance).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(monthStats.balance, { showSign: true })}
             </p>
             <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Neto del periodo</span>
           </div>
@@ -856,9 +857,9 @@ export default function TransactionsPage() {
             </span>
             <p 
               className="text-sm sm:text-base xl:text-lg font-black text-emerald-400 mt-1 truncate" 
-              title={`+$${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              title={formatCurrency(monthStats.income, { type: 'income' })}
             >
-              +${monthStats.income.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(monthStats.income, { type: 'income' })}
             </p>
             <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Entradas</span>
           </div>
@@ -869,9 +870,9 @@ export default function TransactionsPage() {
             </span>
             <p 
               className="text-sm sm:text-base xl:text-lg font-black text-rose-400 mt-1 truncate" 
-              title={`-${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              title={formatCurrency(monthStats.expense, { type: 'expense' })}
             >
-              -${monthStats.expense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(monthStats.expense, { type: 'expense' })}
             </p>
             <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Salidas</span>
           </div>
@@ -1082,7 +1083,7 @@ export default function TransactionsPage() {
                         isIncome ? 'text-emerald-400' : 'text-rose-400'
                       }`}
                     >
-                      {isIncome ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                      {formatCurrency(tx.amount, { type: isIncome ? 'income' : 'expense' })}
                     </span>
                   </div>
                 </div>
@@ -1554,7 +1555,7 @@ export default function TransactionsPage() {
               <span className={`text-2xl font-black block mt-1 ${
                 selectedDetailTx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'
               }`}>
-                {selectedDetailTx.type === 'income' ? '+' : '-'}${Math.abs(selectedDetailTx.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                {formatCurrency(selectedDetailTx.amount, { type: selectedDetailTx.type })}
               </span>
             </div>
 
@@ -1586,7 +1587,7 @@ export default function TransactionsPage() {
                   {selectedDetailTx.details.map((it, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs leading-normal">
                       <span className="text-slate-300 truncate pr-3">{it.description || 'Ítem'}</span>
-                      <span className="text-slate-200 font-bold whitespace-nowrap">${Number(it.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-slate-200 font-bold whitespace-nowrap">{formatCurrency(it.amount)}</span>
                     </div>
                   ))}
                 </div>

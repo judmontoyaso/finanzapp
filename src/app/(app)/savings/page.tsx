@@ -13,6 +13,7 @@ import {
   FiArrowDownLeft 
 } from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
+import { formatCurrency } from '@/lib/format'
 
 export default function SavingsPage() {
   const [goals, setGoals] = useState<SavingsGoal[]>([])
@@ -182,13 +183,13 @@ export default function SavingsPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Objetivo Acumulado</span>
             <p className="text-2xl font-extrabold text-slate-100 mt-1">
-              ${totalTarget.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              {formatCurrency(totalTarget)}
             </p>
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Monto Ahorrado</span>
             <p className="text-2xl font-extrabold text-emerald-400 mt-1">
-              ${totalCurrent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              {formatCurrency(totalCurrent)}
             </p>
           </div>
           <div>
@@ -259,17 +260,17 @@ export default function SavingsPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-2.5 border-t border-b border-slate-805 my-2.5 text-xs font-semibold">
+                  <div className="grid grid-cols-2 gap-4 py-2.5 border-t border-b border-slate-800 my-2.5 text-xs font-semibold">
                     <div>
                       <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Ahorrado</span>
-                      <span className="text-sm font-bold block mt-0.5 text-emerald-450">
-                        ${g.current_amount.toLocaleString()}
+                      <span className="text-sm font-bold block mt-0.5 text-emerald-400">
+                        {formatCurrency(g.current_amount)}
                       </span>
                     </div>
                     <div>
                       <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Objetivo</span>
-                      <span className="text-sm font-bold block mt-0.5 text-slate-350">
-                        ${g.target_amount.toLocaleString()}
+                      <span className="text-sm font-bold block mt-0.5 text-slate-300">
+                        {formatCurrency(g.target_amount)}
                       </span>
                     </div>
                   </div>
@@ -453,7 +454,7 @@ export default function SavingsPage() {
               {actionType === 'contribute' ? 'Aportar Ahorro' : 'Retirar Ahorro'}
             </h2>
             <p className="text-xs text-slate-400 mb-6">
-              Meta: <span className="text-emerald-555 font-bold">{activeGoal.name}</span>. Ahorro actual: ${activeGoal.current_amount.toLocaleString()}.
+              Meta: <span className="text-emerald-400 font-bold">{activeGoal.name}</span>. Ahorro actual: {formatCurrency(activeGoal.current_amount)}.
             </p>
 
             <form onSubmit={handleExecuteAction} className="space-y-4">

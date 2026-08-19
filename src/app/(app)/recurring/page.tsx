@@ -5,6 +5,7 @@ import { LocalDB } from '@/lib/db'
 import { Category, RecurringTransaction, RecurringFrequency } from '@/types'
 import { toast } from 'react-hot-toast'
 import { FiPlus, FiX, FiEdit, FiTrash2, FiCheck, FiClock, FiRepeat } from 'react-icons/fi'
+import { formatCurrency } from '@/lib/format'
 
 const FREQ_LABELS: Record<RecurringFrequency, string> = {
   daily: 'Diario',
@@ -190,7 +191,7 @@ export default function RecurringPage() {
                   </p>
                 </div>
                 <span className={`text-sm font-bold whitespace-nowrap ${r.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {r.type === 'income' ? '+' : '-'}${r.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                  {formatCurrency(r.amount, { type: r.type })}
                 </span>
                 <div className="flex gap-2">
                   <button
@@ -242,7 +243,7 @@ export default function RecurringPage() {
 
               <div className="flex items-baseline justify-between mb-3">
                 <span className={`text-lg font-extrabold ${r.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {r.type === 'income' ? '+' : '-'}${r.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                  {formatCurrency(r.amount, { type: r.type })}
                 </span>
                 <span className="text-[10px] text-slate-500">{catName(r.category_id)}</span>
               </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Transaction, Category } from '@/types'
+import { formatCurrency } from '@/lib/format'
 
 type ChartsProps = {
   transactions: Transaction[]
@@ -258,16 +259,16 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
               </p>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span className="text-slate-450">Ingresos:</span>
-                <span className="font-bold text-emerald-450">
-                  ${monthlyHistory[activeBarIdx].income.toLocaleString('es-ES')}
+                <span className="text-slate-400">Ingresos:</span>
+                <span className="font-bold text-emerald-400">
+                  {formatCurrency(monthlyHistory[activeBarIdx].income)}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                <span className="text-slate-450">Gastos:</span>
-                <span className="font-bold text-rose-450">
-                  ${monthlyHistory[activeBarIdx].expense.toLocaleString('es-ES')}
+                <span className="text-slate-400">Gastos:</span>
+                <span className="font-bold text-rose-400">
+                  {formatCurrency(monthlyHistory[activeBarIdx].expense)}
                 </span>
               </div>
             </div>
@@ -315,10 +316,10 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: colors[idx % colors.length] }}
                     ></span>
-                    <span className="text-xs font-semibold text-slate-350">{item.name}</span>
+                    <span className="text-xs font-semibold text-slate-300">{item.name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-bold text-slate-100">${item.amount.toLocaleString()}</span>
+                    <span className="text-xs font-bold text-slate-100">{formatCurrency(item.amount)}</span>
                     <span className="text-[9px] text-slate-500 ml-1.5">{item.percentage.toFixed(0)}%</span>
                   </div>
                 </div>
@@ -374,7 +375,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
                     {expenseByCategory[activeDonutIdx].name}
                   </span>
                   <span className="text-sm font-bold text-slate-100 mt-0.5">
-                    ${expenseByCategory[activeDonutIdx].amount.toLocaleString()}
+                    {formatCurrency(expenseByCategory[activeDonutIdx].amount)}
                   </span>
                   <span className="text-[9px] text-emerald-500 font-bold">
                     {expenseByCategory[activeDonutIdx].percentage.toFixed(0)}%
@@ -386,7 +387,7 @@ export default function DashboardCharts({ transactions, categories }: ChartsProp
                     Total Gastos
                   </span>
                   <span className="text-base font-bold text-slate-100 mt-0.5">
-                    ${totalExpenseThisMonth.toLocaleString()}
+                    {formatCurrency(totalExpenseThisMonth)}
                   </span>
                   <span className="text-[8px] text-slate-500">Este Mes</span>
                 </>
